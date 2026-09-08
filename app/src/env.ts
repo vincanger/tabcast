@@ -1,0 +1,18 @@
+import * as z from "zod";
+import { defineEnvValidationSchema } from "wasp/env";
+
+export const serverEnvValidationSchema = defineEnvValidationSchema(
+  z.object({
+    OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required."),
+    OPENAI_SCRIPT_MODEL: z.string().default("gpt-4o-mini"),
+    OPENAI_TTS_MODEL: z.string().default("tts-1"),
+    OPENAI_TTS_VOICE: z.string().default("alloy"),
+
+    S3_BUCKET: z.string().min(1, "S3_BUCKET is required."),
+    S3_REGION: z.string().default("us-east-1"),
+    S3_ACCESS_KEY_ID: z.string().min(1, "S3_ACCESS_KEY_ID is required."),
+    S3_SECRET_ACCESS_KEY: z.string().min(1, "S3_SECRET_ACCESS_KEY is required."),
+    // Optional. Set for S3 compatible providers such as MinIO, R2, or Tigris.
+    S3_ENDPOINT: z.string().url().optional(),
+  }),
+);

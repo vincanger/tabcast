@@ -1,0 +1,114 @@
+:root {
+  --bg: #ffffff;
+  --text: #1a1a1a;
+  --muted: #6b6b6b;
+  --border: #e3e3df;
+  --accent: #2f5bea;
+  --danger: #c0392b;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--bg);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 300px;
+}
+
+/* Same markup renders as a toolbar popup and as a full tab. */
+.popup {
+  max-width: 360px;
+  padding: 14px;
+}
+
+h1 {
+  font-size: 15px;
+  margin: 0 0 10px;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+input {
+  font: inherit;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+button.primary {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-weight: 600;
+}
+button.link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+.muted {
+  color: var(--muted);
+}
+.small {
+  font-size: 12px;
+}
+.error {
+  color: var(--danger);
+  margin: 0;
+}
+
+.status {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.status .count {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+details {
+  margin-top: 12px;
+}
+summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12px;
+}
+details form {
+  margin-top: 8px;
+}
+
+.hint {
+  margin: 10px 0 0;
+}

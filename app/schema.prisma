@@ -1,0 +1,56 @@
+datasource db {
+  provider = "postgresql"
+  // Wasp requires that the url is set to the DATABASE_URL environment variable.
+  url      = env("DATABASE_URL")
+}
+
+// Wasp requires the `prisma-client-js` generator to be present.
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  createdAt DateTime  @default(now())
+  articles  Article[]
+  episodes  Episode[]
+}
+
+model Article {
+  id          Int      @id @default(autoincrement())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      Int
+  url         String
+  title       String
+  siteName    String?
+  byline      String?
+  excerpt     String?
+  textContent String
+  wordCount   Int
+  savedAt     DateTime @default(now())
+  // Set once the article has been included in an episode.
+  episode     Episode? @relation(fields: [episodeId], references: [id], onDelete: SetNull)
+  episodeId   Int?
+
+  @@unique([userId, url])
+  @@index([userId, episodeId])
+}
+
+model Episode {
+  id              Int       @id @default(autoincrement())
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          Int
+  // pending | generating | ready | failed
+  status          String    @default("pending")
+  targetMinutes   Int
+  title           String    @default("Untitled episode")
+  script          String?
+  audioKey        String?
+  durationSeconds Int?
+  error           String?
+  createdAt       DateTime  @default(now())
+  completedAt     DateTime?
+  articles        Article[]
+
+  @@index([userId, createdAt])
+}
