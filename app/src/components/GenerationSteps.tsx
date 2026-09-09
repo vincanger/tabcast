@@ -32,41 +32,34 @@ export function GenerationSteps({
   ];
 
   return (
-    <div className="rounded-2xl border bg-card p-5">
-      <div className="mb-4 flex items-center gap-2">
-        <span className="relative flex size-2.5">
-          <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-70" />
-          <span className="relative inline-flex size-2.5 rounded-full bg-primary" />
+    <div className="border bg-secondary p-5">
+      <div className="mb-4 flex items-center gap-3 border-b pb-3">
+        <span className="kicker flex items-center gap-2 text-rubric">
+          <span className="size-2 animate-pulse bg-rubric" />
+          Live
         </span>
-        <p className="font-medium">Building your episode</p>
-        <span className="ml-auto text-sm tabular-nums text-muted-foreground">
-          {Math.floor(elapsed / 1000)}s
-        </span>
+        <p className="font-serif text-lg">Building your episode</p>
+        <span className="kicker ml-auto tabular-nums">{Math.floor(elapsed / 1000)}s</span>
       </div>
 
-      <ol className="space-y-3">
-        {labels.map((label, i) => (
-          <li key={label} className="flex items-center gap-3">
-            {i < activeIndex ? (
-              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                <Check className="size-3.5" strokeWidth={3} />
-              </span>
-            ) : i === activeIndex ? (
-              // The ring itself spins. A spinner glyph inside a bordered circle
-              // reads as two rings stacked on each other.
-              <span className="size-6 shrink-0 animate-spin rounded-full border-2 border-primary/25 border-t-primary" />
-            ) : (
-              <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground">
-                <span className="size-1.5 rounded-full bg-current opacity-50" />
-              </span>
-            )}
-            <span
-              className={cn("text-sm", i === activeIndex ? "text-foreground" : "text-muted-foreground")}
+      <ol className="space-y-2 font-serif text-lg">
+        {labels.map((label, i) => {
+          const done = i < activeIndex;
+          const active = i === activeIndex;
+          return (
+            <li
+              key={label}
+              className={cn(
+                "flex items-baseline gap-3",
+                active ? "text-rubric" : done ? "text-foreground" : "text-muted-foreground/70",
+              )}
             >
-              {label}
-            </span>
-          </li>
-        ))}
+              <span className="w-5 tabular-nums">{i + 1}.</span>
+              <span>{label}</span>
+              {done && <Check className="size-4 self-center text-rubric" strokeWidth={2.5} />}
+            </li>
+          );
+        })}
       </ol>
     </div>
   );

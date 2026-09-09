@@ -17,7 +17,7 @@ import { MAX_MINUTES, MIN_MINUTES } from "./shared/constants";
 
 export type InboxArticle = Pick<
   Article,
-  "id" | "url" | "title" | "siteName" | "wordCount" | "savedAt"
+  "id" | "url" | "title" | "siteName" | "byline" | "wordCount" | "savedAt"
 >;
 
 export const getInbox: GetInbox<void, InboxArticle[]> = async (_args, context) => {
@@ -25,7 +25,15 @@ export const getInbox: GetInbox<void, InboxArticle[]> = async (_args, context) =
   return context.entities.Article.findMany({
     where: { userId: context.user.id, episodeId: null },
     orderBy: { savedAt: "desc" },
-    select: { id: true, url: true, title: true, siteName: true, wordCount: true, savedAt: true },
+    select: {
+      id: true,
+      url: true,
+      title: true,
+      siteName: true,
+      byline: true,
+      wordCount: true,
+      savedAt: true,
+    },
   });
 };
 

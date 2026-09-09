@@ -2,53 +2,57 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/inter";
+@import "@fontsource-variable/newsreader";
 
-/* The dashboard is dark only. Making the variant unconditional means the
-   `dark:` utilities inside the shadcn components always apply, with no class
-   on <html> to add at runtime and therefore nothing for SSR to mismatch. */
-@custom-variant dark (&);
+@custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Warm amber on near-black. The app commits to a dark palette, so these are
-     defined once here; the `dark` class on <html> exists only so the `dark:`
-     variants inside the shadcn components resolve. */
-  --background: oklch(0.16 0.008 70);
-  --foreground: oklch(0.97 0.005 85);
-  --card: oklch(0.205 0.01 70);
-  --card-foreground: oklch(0.97 0.005 85);
-  --popover: oklch(0.205 0.01 70);
-  --popover-foreground: oklch(0.97 0.005 85);
-  --primary: oklch(0.8 0.155 72);
-  --primary-foreground: oklch(0.2 0.02 70);
-  --secondary: oklch(0.27 0.012 70);
-  --secondary-foreground: oklch(0.97 0.005 85);
-  --muted: oklch(0.27 0.012 70);
-  --muted-foreground: oklch(0.72 0.018 78);
-  --accent: oklch(0.3 0.02 70);
-  --accent-foreground: oklch(0.97 0.005 85);
-  --destructive: oklch(0.63 0.2 25);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 16%);
-  --ring: oklch(0.8 0.155 72);
-  --chart-1: oklch(0.8 0.155 72);
-  --chart-2: oklch(0.7 0.13 60);
-  --chart-3: oklch(0.6 0.11 48);
-  --chart-4: oklch(0.5 0.09 40);
-  --chart-5: oklch(0.4 0.07 34);
-  --radius: 0.75rem;
-  --sidebar: oklch(0.205 0.01 70);
-  --sidebar-foreground: oklch(0.97 0.005 85);
-  --sidebar-primary: oklch(0.8 0.155 72);
-  --sidebar-primary-foreground: oklch(0.2 0.02 70);
-  --sidebar-accent: oklch(0.3 0.02 70);
-  --sidebar-accent-foreground: oklch(0.97 0.005 85);
-  --sidebar-border: oklch(1 0 0 / 12%);
-  --sidebar-ring: oklch(0.8 0.155 72);
+  /* Paper and ink. One warm cream sheet for everything; emphasis comes from
+     rules and type weight rather than surfaces, shadows or radii. */
+  --background: oklch(0.965 0.012 85);
+  --foreground: oklch(0.2 0.02 60);
+  --card: oklch(0.965 0.012 85);
+  --card-foreground: oklch(0.2 0.02 60);
+  --popover: oklch(0.975 0.01 85);
+  --popover-foreground: oklch(0.2 0.02 60);
+  /* Primary is ink: filled buttons are black on cream. */
+  --primary: oklch(0.2 0.02 60);
+  --primary-foreground: oklch(0.965 0.012 85);
+  /* A slightly deeper tint for boxed features like the generate panel. */
+  --secondary: oklch(0.935 0.016 80);
+  --secondary-foreground: oklch(0.2 0.02 60);
+  --muted: oklch(0.935 0.016 80);
+  --muted-foreground: oklch(0.45 0.02 60);
+  --accent: oklch(0.92 0.018 78);
+  --accent-foreground: oklch(0.2 0.02 60);
+  /* Oxblood. Red ink for links, the live step, and the played waveform. */
+  --rubric: oklch(0.48 0.17 25);
+  --destructive: oklch(0.48 0.17 25);
+  --border: oklch(0.2 0.02 60 / 18%);
+  --input: oklch(0.2 0.02 60 / 28%);
+  --ring: oklch(0.48 0.17 25);
+  --chart-1: oklch(0.2 0.02 60);
+  --chart-2: oklch(0.48 0.17 25);
+  --chart-3: oklch(0.45 0.02 60);
+  --chart-4: oklch(0.65 0.02 60);
+  --chart-5: oklch(0.8 0.015 70);
+  /* Sharp edges everywhere. Every component radius derives from this. */
+  --radius: 0rem;
+  --sidebar: oklch(0.965 0.012 85);
+  --sidebar-foreground: oklch(0.2 0.02 60);
+  --sidebar-primary: oklch(0.2 0.02 60);
+  --sidebar-primary-foreground: oklch(0.965 0.012 85);
+  --sidebar-accent: oklch(0.935 0.016 80);
+  --sidebar-accent-foreground: oklch(0.2 0.02 60);
+  --sidebar-border: oklch(0.2 0.02 60 / 18%);
+  --sidebar-ring: oklch(0.48 0.17 25);
 }
 
 @theme inline {
-  --font-heading: var(--font-sans);
-  --font-sans: 'Inter Variable', sans-serif;
+  --font-heading: var(--font-serif);
+  --font-serif: 'Newsreader Variable', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Inter Variable', system-ui, sans-serif;
+  --color-rubric: var(--rubric);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -98,6 +102,22 @@
     @apply bg-background text-foreground;
   }
   html {
+    @apply font-serif;
+  }
+  button,
+  input,
+  select,
+  textarea {
     @apply font-sans;
   }
+}
+
+/* Small caps label used for section heads, datelines and metadata. */
+@utility kicker {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
 }

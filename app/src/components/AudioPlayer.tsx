@@ -69,6 +69,20 @@ export function AudioPlayer({ src, title }: { src: string; title: string }) {
   const [downloading, setDownloading] = useState(false);
 
   const speed = SPEEDS[speedIndex];
+  const progress = duration > 0 ? current / duration : 0;
+
+  function toggle() {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (audio.paused) void audio.play();
+    else audio.pause();
+  }
+
+  function seekTo(fraction: number) {
+    const audio = audioRef.current;
+    if (!audio || !Number.isFinite(audio.duration)) return;
+    audio.currentTime = fraction * audio.duration;
+  }
 
   function cycleSpeed() {
     const next = (speedIndex + 1) % SPEEDS.length;
@@ -97,23 +111,8 @@ export function AudioPlayer({ src, title }: { src: string; title: string }) {
     }
   }
 
-  const progress = duration > 0 ? current / duration : 0;
-
-  function toggle() {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (audio.paused) void audio.play();
-    else audio.pause();
-  }
-
-  function seekTo(fraction: number) {
-    const audio = audioRef.current;
-    if (!audio || !Number.isFinite(audio.duration)) return;
-    audio.currentTime = fraction * audio.duration;
-  }
-
   return (
-    <div className="flex items-center gap-4 rounded-2xl border bg-card p-4">
+    <div className="flex items-center gap-4 border bg-secondary p-4">
       <audio
         ref={audioRef}
         src={src}
@@ -132,7 +131,7 @@ export function AudioPlayer({ src, title }: { src: string; title: string }) {
         type="button"
         onClick={toggle}
         aria-label={playing ? "Pause" : "Play"}
-        className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition hover:opacity-90 focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none"
+        className="flex size-12 shrink-0 items-center justify-center bg-primary text-primary-foreground transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       >
         {playing ? (
           <Pause className="size-5 fill-current" />
@@ -167,15 +166,15 @@ export function AudioPlayer({ src, title }: { src: string; title: string }) {
                 key={i}
                 style={{ height: `${height * 100}%` }}
                 className={cn(
-                  "flex-1 rounded-full transition-colors",
-                  played ? "bg-primary" : "bg-muted-foreground/30",
+                  "flex-1 transition-colors",
+                  played ? "bg-rubric" : "bg-foreground/25",
                   !peaks && "animate-pulse",
                 )}
               />
             );
           })}
         </div>
-        <div className="mt-1 flex justify-between text-xs tabular-nums text-muted-foreground">
+        <div className="kicker mt-1 flex justify-between tabular-nums">
           <span>{formatTime(current)}</span>
           <span>{formatTime(duration)}</span>
         </div>
@@ -187,7 +186,7 @@ export function AudioPlayer({ src, title }: { src: string; title: string }) {
           size="sm"
           onClick={cycleSpeed}
           aria-label={`Playback speed ${speed}x, click to change`}
-          className="w-14 tabular-nums"
+          className="kicker w-14 tabular-nums"
         >
           {speed}&times;
         </Button>

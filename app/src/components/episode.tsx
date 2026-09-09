@@ -1,18 +1,21 @@
-import type { ComponentProps } from "react";
 import { Badge } from "./ui/badge";
+import { cn } from "../lib/utils";
 
-type BadgeVariant = ComponentProps<typeof Badge>["variant"];
-
-const STATUS: Record<string, { label: string; variant: BadgeVariant }> = {
-  pending: { label: "Queued", variant: "outline" },
-  generating: { label: "Generating", variant: "secondary" },
-  ready: { label: "Ready", variant: "default" },
-  failed: { label: "Failed", variant: "destructive" },
+const STATUS: Record<string, { label: string; className: string }> = {
+  pending: { label: "Queued", className: "border-rubric text-rubric" },
+  generating: { label: "Live", className: "border-rubric text-rubric" },
+  ready: { label: "Ready", className: "" },
+  failed: { label: "Failed", className: "border-destructive text-destructive" },
 };
 
+// A small caps kicker with a hairline border, like a section tag in print.
 export function StatusBadge({ status }: { status: string }) {
-  const { label, variant } = STATUS[status] ?? { label: status, variant: "outline" };
-  return <Badge variant={variant}>{label}</Badge>;
+  const { label, className } = STATUS[status] ?? { label: status, className: "" };
+  return (
+    <Badge variant="outline" className={cn("kicker h-5 px-1.5 text-[10px]", className)}>
+      {label}
+    </Badge>
+  );
 }
 
 export function isInFlight(status: string | undefined): boolean {

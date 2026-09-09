@@ -28,7 +28,7 @@ A Wasp showcase app in two parts: a Chrome extension that saves articles with on
 | Duplicates | Same URL saved twice is a no-op, badge says already saved |
 | Transcript | Episode page shows script and links to source articles |
 | Wasp version | 0.25 |
-| Dashboard UI | Tailwind v4 and shadcn, Radix registry with the Luma preset |
+| Dashboard UI | Tailwind v4 and shadcn, Radix registry with the Luma preset. Paper look: one cream ground, ink text, hairline rules, zero radius, Newsreader serif for reading with Inter for controls and labels, oxblood red as the only accent |
 | Podcast feed | Private RSS per user, guarded by a secret token in the URL that the user can regenerate. No public feed and no directory listing |
 
 ## Out of scope for v1

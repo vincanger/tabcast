@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { Inbox, Sparkles, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import {
   deleteArticle,
   generateEpisode,
@@ -55,7 +55,7 @@ export function InboxPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       {inFlight ? (
         <div className="animate-in fade-in">
           <GenerationSteps
@@ -63,22 +63,20 @@ export function InboxPage() {
             startedAt={inFlight.createdAt}
             articleCount={inFlight.articleCount}
           />
-          <p className="mt-3 text-center text-sm text-muted-foreground">
+          <p className="kicker mt-3 text-center">
             <Link to={`/episodes/${inFlight.id}`} className="hover:text-foreground">
               Open the episode page →
             </Link>
           </p>
         </div>
       ) : (
-        <div className="relative overflow-hidden rounded-2xl border bg-card p-6">
-          {/* Warm glow behind the primary action. */}
-          <div className="pointer-events-none absolute -top-24 -right-16 size-56 rounded-full bg-primary/15 blur-3xl" />
-          <div className="relative flex flex-wrap items-end gap-x-8 gap-y-6">
+        <div className="border bg-secondary p-6">
+          <div className="flex flex-wrap items-end gap-x-8 gap-y-6">
             <div>
-              <p className="text-sm text-muted-foreground">Target length</p>
-              <p className="flex items-baseline gap-1.5">
-                <span className="text-5xl font-semibold tabular-nums">{minutes}</span>
-                <span className="text-lg text-muted-foreground">min</span>
+              <p className="kicker">Target length</p>
+              <p className="flex items-baseline gap-1.5 font-serif">
+                <span className="text-6xl leading-none tabular-nums">{minutes}</span>
+                <span className="text-xl text-muted-foreground">min</span>
               </p>
             </div>
             <div className="min-w-48 flex-1 pb-3">
@@ -91,8 +89,7 @@ export function InboxPage() {
                 onValueChange={([value]) => setMinutes(value)}
               />
             </div>
-            <Button size="lg" className="pb-0.5" disabled={!canGenerate} onClick={onGenerate}>
-              <Sparkles className="size-4" />
+            <Button size="lg" className="kicker text-primary-foreground" disabled={!canGenerate} onClick={onGenerate}>
               {busy
                 ? "Starting…"
                 : `Generate from ${articles.length} article${articles.length === 1 ? "" : "s"}`}
@@ -116,29 +113,28 @@ export function InboxPage() {
       )}
 
       <section>
-        <h2 className="mb-3 text-xl font-semibold tracking-tight">Inbox</h2>
-        {inbox.isLoading && <Skeleton className="h-40 w-full rounded-2xl" />}
+        <h2 className="kicker border-b pb-2">Inbox</h2>
+        {inbox.isLoading && <Skeleton className="mt-4 h-40 w-full" />}
         {inbox.error && (
-          <Alert variant="destructive">
+          <Alert variant="destructive" className="mt-4">
             <AlertDescription>{inbox.error.message}</AlertDescription>
           </Alert>
         )}
         {!inbox.isLoading && articles.length === 0 && (
-          <div className="rounded-2xl border border-dashed py-14 text-center">
-            <Inbox className="mx-auto size-8 text-muted-foreground" strokeWidth={1.5} />
-            <p className="mt-3 font-medium">Nothing saved yet</p>
-            <p className="mt-1 text-sm text-muted-foreground">
+          <div className="mt-4 border px-6 py-12 text-center">
+            <p className="font-serif text-xl">Nothing saved yet</p>
+            <p className="mt-1 font-serif italic text-muted-foreground">
               Click the extension icon on any article to save it here.
             </p>
           </div>
         )}
         {articles.length > 0 && (
-          <ul className="divide-y overflow-hidden rounded-2xl border bg-card">
+          <ul className="divide-y">
             {articles.map((a, i) => (
               <li
                 key={a.id}
                 style={{ animationDelay: `${i * 45}ms` }}
-                className="group flex animate-in items-center gap-4 px-4 py-3 fade-in slide-in-from-bottom-2 fill-mode-backwards hover:bg-muted/40"
+                className="group flex animate-in items-center gap-4 py-4 fade-in slide-in-from-bottom-2 fill-mode-backwards"
               >
                 <SourceIcon url={a.url} />
                 <div className="min-w-0 flex-1">
@@ -146,14 +142,17 @@ export function InboxPage() {
                     href={a.url}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className="block truncate font-medium hover:text-primary"
+                    className="block truncate font-serif text-lg leading-snug hover:text-rubric"
                   >
                     {a.title}
                   </a>
-                  <div className="text-sm text-muted-foreground">
-                    {a.siteName ?? new URL(a.url).hostname} · {a.wordCount.toLocaleString()} words ·{" "}
-                    {formatDate(a.savedAt)}
-                  </div>
+                  <p className="truncate font-serif italic text-muted-foreground">
+                    {a.byline ? `By ${a.byline} · ` : ""}
+                    {a.siteName ?? new URL(a.url).hostname}
+                  </p>
+                  <p className="kicker mt-0.5">
+                    {a.wordCount.toLocaleString()} words · {formatDate(a.savedAt)}
+                  </p>
                 </div>
                 <Button
                   variant="ghost"

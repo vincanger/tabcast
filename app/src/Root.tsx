@@ -1,40 +1,51 @@
+import { useEffect, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router";
-import { AudioLines } from "lucide-react";
 import { logout, useAuth } from "wasp/client/auth";
-import { Button } from "./components/ui/button";
 import { cn } from "./lib/utils";
 import "./Main.css";
 
 export function Root() {
   const { data: user } = useAuth();
   const { pathname } = useLocation();
+  // Set after mount so the prerendered HTML and the browser agree.
+  const [today, setToday] = useState("");
+  useEffect(() => {
+    setToday(
+      new Date().toLocaleDateString(undefined, {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }),
+    );
+  }, []);
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-5 py-3">
-          <Link to="/" className="flex items-center gap-2 font-semibold tracking-tight">
-            <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <AudioLines className="size-4" />
-            </span>
+      <header className="border-b-[3px] border-double">
+        <div className="mx-auto max-w-3xl px-5">
+          <div className="kicker flex items-center justify-between gap-4 border-b py-2">
+            <span>{today}</span>
+            {user && (
+              <nav className="flex items-center gap-5">
+                <NavLink to="/" active={pathname === "/"}>
+                  Inbox
+                </NavLink>
+                <NavLink to="/episodes" active={pathname.startsWith("/episodes")}>
+                  Episodes
+                </NavLink>
+                <span className="hidden normal-case tracking-normal sm:inline">
+                  {user.identities.email?.id}
+                </span>
+                <button type="button" onClick={() => logout()} className="kicker hover:text-foreground">
+                  Log out
+                </button>
+              </nav>
+            )}
+          </div>
+          <Link to="/" className="block py-6 text-center font-serif text-4xl font-medium tracking-tight sm:text-5xl">
             Article to Podcast
           </Link>
-          {user && (
-            <nav className="flex items-center gap-1">
-              <NavLink to="/" active={pathname === "/"}>
-                Inbox
-              </NavLink>
-              <NavLink to="/episodes" active={pathname.startsWith("/episodes")}>
-                Episodes
-              </NavLink>
-              <span className="mx-2 hidden text-sm text-muted-foreground sm:inline">
-                {user.identities.email?.id}
-              </span>
-              <Button variant="ghost" size="sm" onClick={() => logout()}>
-                Log out
-              </Button>
-            </nav>
-          )}
         </div>
       </header>
       <main className="mx-auto max-w-3xl px-5 pt-8 pb-16">
@@ -54,10 +65,14 @@ function NavLink({
   children: React.ReactNode;
 }) {
   return (
-    <Button asChild variant="ghost" size="sm">
-      <Link to={to} className={cn(!active && "text-muted-foreground")}>
-        {children}
-      </Link>
-    </Button>
+    <Link
+      to={to}
+      className={cn(
+        "kicker border-b-2 pb-px hover:text-foreground",
+        active ? "border-rubric text-foreground" : "border-transparent",
+      )}
+    >
+      {children}
+    </Link>
   );
 }
