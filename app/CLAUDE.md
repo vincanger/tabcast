@@ -21,3 +21,16 @@ This project uses the Wasp framework.
 
 - Run `wasp compile` to check if app is valid.
 - Do not run `tsc` directly for validation.
+
+## Shadcn
+
+Set up per the [Wasp shadcn guide](https://wasp.sh/docs/guides/libraries/shadcn.md), with two deviations forced by the `radix-luma` preset:
+
+- Wasp does not support the `@` alias, so `components.json` aliases are relative (`src/components`, `src/lib/utils`, ...). The `@` alias is only added to `tsconfig.json` temporarily to get past the CLI's preflight, then removed.
+- The preset's components import `cn` from a bare `"cn"` package. That name belongs to an unrelated package on npm, and it breaks Wasp's SSR prerender step. `src/lib/utils.ts` defines `cn` with clsx and tailwind-merge instead.
+
+After every `npx shadcn@latest add <component>`, rewrite the import in the generated file:
+
+```bash
+sed -i '' 's|import { cn } from "cn"|import { cn } from "../../lib/utils"|' src/components/ui/*.tsx
+```

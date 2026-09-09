@@ -12,6 +12,9 @@ generator client {
 model User {
   id        Int       @id @default(autoincrement())
   createdAt DateTime  @default(now())
+  // Secret that stands in for a session on the podcast feed, which is fetched
+  // by podcast apps that cannot log in. Rotating it revokes every subscriber.
+  feedToken String?   @unique
   articles  Article[]
   episodes  Episode[]
 }
@@ -42,11 +45,15 @@ model Episode {
   userId          Int
   // pending | generating | ready | failed
   status          String    @default("pending")
+  // While generating: reading | writing | recording. Null otherwise.
+  phase           String?
   targetMinutes   Int
   title           String    @default("Untitled episode")
   script          String?
   audioKey        String?
   durationSeconds Int?
+  // Size of the MP3, needed for the RSS enclosure.
+  audioBytes      Int?
   error           String?
   createdAt       DateTime  @default(now())
   completedAt     DateTime?

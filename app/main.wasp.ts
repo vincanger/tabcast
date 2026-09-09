@@ -17,8 +17,11 @@ import {
   generateEpisode,
   getEpisode,
   getEpisodes,
+  getFeed,
   getInbox,
+  rotateFeedToken,
 } from "./src/operations" with { type: "ref" };
+import { feedApi, feedAudioApi } from "./src/feed" with { type: "ref" };
 import { extApiMiddleware, extStatusApi, saveArticleApi } from "./src/apis" with { type: "ref" };
 import { generateEpisodeJob } from "./src/jobs/generateEpisode" with { type: "ref" };
 
@@ -61,11 +64,24 @@ export default app({
     query(getEpisode, { entities: ["Episode"] }),
     action(deleteArticle, { entities: ["Article"] }),
     action(generateEpisode, { entities: ["Article", "Episode"] }),
+    query(getFeed, { entities: ["User"] }),
+    action(rotateFeedToken, { entities: ["User"] }),
 
     // HTTP APIs used by the Chrome extension
     apiNamespace("/api/ext", { middlewareConfigFn: extApiMiddleware }),
     api("POST", "/api/ext/articles", saveArticleApi, { entities: ["Article"], auth: true }),
     api("GET", "/api/ext/status", extStatusApi, { entities: ["Article"], auth: true }),
+
+    // Podcast feed. Fetched by podcast apps, which cannot log in, so the user's
+    // secret token in the URL stands in for a session.
+    api("GET", "/api/feed/:token", feedApi, {
+      entities: ["User", "Episode", "Article"],
+      auth: false,
+    }),
+    api("GET", "/api/feed/:token/episodes/:id/audio.mp3", feedAudioApi, {
+      entities: ["User", "Episode"],
+      auth: false,
+    }),
 
     // Background generation
     job(generateEpisodeJob, { executor: "PgBoss", entities: ["Episode", "Article"] }),

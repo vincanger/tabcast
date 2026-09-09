@@ -61,10 +61,15 @@ async function handleSave(tabId: number) {
     if (!parsed.ok) throw new Error(parsed.reason);
 
     const result = await saveArticle(parsed.article);
+    await browser.action.setTitle({ tabId, title: "" });
     await setBadge(tabId, result.result === "created" ? "saved" : "duplicate", BADGE_CLEAR_MS);
   } catch (err) {
+    const reason = err instanceof Error ? err.message : "Could not save this page.";
     console.warn("[article-to-podcast] save failed:", err);
     await setBadge(tabId, "error", BADGE_CLEAR_MS);
+    // The badge alone cannot say what went wrong, so put the reason on the
+    // icon's tooltip until the next save.
+    await browser.action.setTitle({ tabId, title: `Not saved: ${reason}` });
     if (err instanceof ApiError && err.status === 401) {
       // Session is gone. Re-attach the popup so the next click shows login.
       await syncPopup();

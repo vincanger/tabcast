@@ -4,11 +4,14 @@ import type {
   GenerateEpisode,
   GetEpisode,
   GetEpisodes,
+  GetFeed,
   GetInbox,
+  RotateFeedToken,
 } from "wasp/server/operations";
 import type { Article, Episode } from "wasp/entities";
 import { generateEpisodeJob } from "wasp/server/jobs";
 import { getSignedAudioUrl } from "./lib/s3";
+import { feedUrl, newFeedToken } from "./feed";
 
 import { MAX_MINUTES, MIN_MINUTES } from "./shared/constants";
 
@@ -28,25 +31,31 @@ export const getInbox: GetInbox<void, InboxArticle[]> = async (_args, context) =
 
 export type EpisodeSummary = Pick<
   Episode,
-  "id" | "status" | "title" | "targetMinutes" | "durationSeconds" | "createdAt" | "error"
-> & { articleCount: number };
+  "id" | "status" | "phase" | "title" | "targetMinutes" | "durationSeconds" | "createdAt" | "error"
+> & { articleCount: number; sourceUrls: string[] };
 
 export const getEpisodes: GetEpisodes<void, EpisodeSummary[]> = async (_args, context) => {
   if (!context.user) throw new HttpError(401);
   const episodes = await context.entities.Episode.findMany({
     where: { userId: context.user.id },
     orderBy: { createdAt: "desc" },
-    include: { _count: { select: { articles: true } } },
+    include: {
+      _count: { select: { articles: true } },
+      // Just enough for the cover mosaic.
+      articles: { select: { url: true }, orderBy: { savedAt: "asc" }, take: 4 },
+    },
   });
-  return episodes.map(({ _count, ...e }) => ({
+  return episodes.map(({ _count, articles, ...e }) => ({
     id: e.id,
     status: e.status,
+    phase: e.phase,
     title: e.title,
     targetMinutes: e.targetMinutes,
     durationSeconds: e.durationSeconds,
     createdAt: e.createdAt,
     error: e.error,
     articleCount: _count.articles,
+    sourceUrls: articles.map((a) => a.url),
   }));
 };
 
@@ -120,3 +129,24 @@ export const generateEpisode: GenerateEpisode<{ targetMinutes: number }, { episo
     await generateEpisodeJob.submit({ episodeId: episode.id });
     return { episodeId: episode.id };
   };
+
+export const getFeed: GetFeed<void, { url: string | null }> = async (_args, context) => {
+  if (!context.user) throw new HttpError(401);
+  const user = await context.entities.User.findUnique({
+    where: { id: context.user.id },
+    select: { feedToken: true },
+  });
+  return { url: user?.feedToken ? feedUrl(user.feedToken) : null };
+};
+
+// Creates the feed on first use and replaces the token on every later call,
+// which is how a user cuts off anyone they shared the link with.
+export const rotateFeedToken: RotateFeedToken<void, { url: string }> = async (_args, context) => {
+  if (!context.user) throw new HttpError(401);
+  const token = newFeedToken();
+  await context.entities.User.update({
+    where: { id: context.user.id },
+    data: { feedToken: token },
+  });
+  return { url: feedUrl(token) };
+};

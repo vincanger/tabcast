@@ -8,6 +8,7 @@ Built as a [Wasp](https://wasp.sh) showcase: a small full-stack app that serves 
 
 ```
 app/                Wasp 0.25 app: auth, Postgres, operations, HTTP APIs, PgBoss job, S3 upload
+                    Dashboard UI is Tailwind v4 + shadcn
 extension/          WXT (Manifest V3) Chrome extension: Readability parsing, badge feedback, login popup
 docker-compose.yml  Local S3 (MinIO) for development
 ```
@@ -55,6 +56,10 @@ npm i -g @wasp.sh/wasp-cli@latest
    Open `chrome://extensions`, enable Developer mode, click Load unpacked, and pick `extension/.output/chrome-mv3`. For live reload use `npm run dev` instead.
 
 6. Click the extension icon once to open the login popup and sign in with the account you created. From then on a click saves the current page. Right-click the icon for the dashboard and account settings.
+
+## Listen in a podcast app
+
+Open Episodes and click Enable podcast feed. The URL it gives you is a private RSS feed; paste it into any podcast app. In Apple Podcasts on a Mac choose File, then Add a Show by URL, and the show syncs to your iPhone through the same Apple ID. Anyone with the link can listen, so Regenerate it if it leaks.
 
 ## Extension to backend contract
 

@@ -6,18 +6,49 @@ import {
   VerifyEmailForm,
 } from "wasp/client/auth";
 import { Link } from "react-router";
+import { Card, CardContent } from "../components/ui/card";
+
+// Wasp's auth forms are pre-styled, so we hand them the shadcn theme tokens
+// instead of rebuilding the forms ourselves.
+const appearance = {
+  colors: {
+    brand: "var(--primary)",
+    brandAccent: "var(--primary)",
+    submitButtonText: "var(--primary-foreground)",
+    errorBackground: "var(--card)",
+    errorText: "var(--destructive)",
+    formErrorText: "var(--destructive)",
+    successBackground: "var(--card)",
+    successText: "var(--foreground)",
+    gray700: "var(--foreground)",
+    gray600: "var(--muted-foreground)",
+    gray500: "var(--muted-foreground)",
+    gray400: "var(--border)",
+  },
+};
 
 function AuthLayout({ children }: { children: React.ReactNode }) {
-  return <div className="auth-card">{children}</div>;
+  return (
+    <Card className="mx-auto mt-12 max-w-sm">
+      <CardContent className="space-y-4">{children}</CardContent>
+    </Card>
+  );
 }
 
 export function LoginPage() {
   return (
     <AuthLayout>
-      <LoginForm />
-      <p className="muted">
-        No account yet? <Link to="/signup">Sign up</Link>. Forgot your password?{" "}
-        <Link to="/request-password-reset">Reset it</Link>.
+      <LoginForm appearance={appearance} />
+      <p className="text-sm text-muted-foreground">
+        No account yet?{" "}
+        <Link to="/signup" className="underline">
+          Sign up
+        </Link>
+        . Forgot your password?{" "}
+        <Link to="/request-password-reset" className="underline">
+          Reset it
+        </Link>
+        .
       </p>
     </AuthLayout>
   );
@@ -26,9 +57,13 @@ export function LoginPage() {
 export function SignupPage() {
   return (
     <AuthLayout>
-      <SignupForm />
-      <p className="muted">
-        Already have an account? <Link to="/login">Log in</Link>.
+      <SignupForm appearance={appearance} />
+      <p className="text-sm text-muted-foreground">
+        Already have an account?{" "}
+        <Link to="/login" className="underline">
+          Log in
+        </Link>
+        .
       </p>
     </AuthLayout>
   );
@@ -37,9 +72,13 @@ export function SignupPage() {
 export function EmailVerificationPage() {
   return (
     <AuthLayout>
-      <VerifyEmailForm />
-      <p className="muted">
-        Verified? <Link to="/login">Go to login</Link>.
+      <VerifyEmailForm appearance={appearance} />
+      <p className="text-sm text-muted-foreground">
+        Verified?{" "}
+        <Link to="/login" className="underline">
+          Go to login
+        </Link>
+        .
       </p>
     </AuthLayout>
   );
@@ -48,7 +87,7 @@ export function EmailVerificationPage() {
 export function RequestPasswordResetPage() {
   return (
     <AuthLayout>
-      <ForgotPasswordForm />
+      <ForgotPasswordForm appearance={appearance} />
     </AuthLayout>
   );
 }
@@ -56,9 +95,13 @@ export function RequestPasswordResetPage() {
 export function PasswordResetPage() {
   return (
     <AuthLayout>
-      <ResetPasswordForm />
-      <p className="muted">
-        Done? <Link to="/login">Go to login</Link>.
+      <ResetPasswordForm appearance={appearance} />
+      <p className="text-sm text-muted-foreground">
+        Done?{" "}
+        <Link to="/login" className="underline">
+          Go to login
+        </Link>
+        .
       </p>
     </AuthLayout>
   );

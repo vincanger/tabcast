@@ -1,15 +1,18 @@
+import type { ComponentProps } from "react";
+import { Badge } from "./ui/badge";
+
+type BadgeVariant = ComponentProps<typeof Badge>["variant"];
+
+const STATUS: Record<string, { label: string; variant: BadgeVariant }> = {
+  pending: { label: "Queued", variant: "outline" },
+  generating: { label: "Generating", variant: "secondary" },
+  ready: { label: "Ready", variant: "default" },
+  failed: { label: "Failed", variant: "destructive" },
+};
+
 export function StatusBadge({ status }: { status: string }) {
-  const label =
-    status === "pending"
-      ? "Queued"
-      : status === "generating"
-        ? "Generating"
-        : status === "ready"
-          ? "Ready"
-          : status === "failed"
-            ? "Failed"
-            : status;
-  return <span className={`badge badge-${status}`}>{label}</span>;
+  const { label, variant } = STATUS[status] ?? { label: status, variant: "outline" };
+  return <Badge variant={variant}>{label}</Badge>;
 }
 
 export function isInFlight(status: string | undefined): boolean {
