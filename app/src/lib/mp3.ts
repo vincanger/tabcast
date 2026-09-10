@@ -50,7 +50,7 @@ function skipId3(buf: Buffer, at: number): number {
   return at + 10 + size;
 }
 
-/** Total playing time in seconds, or null if no frames could be read. */
+/** Total playing time in seconds, fractional, or null if no frames could be read. */
 export function mp3DurationSeconds(buf: Buffer): number | null {
   let pos = skipId3(buf, 0);
   let seconds = 0;
@@ -70,5 +70,5 @@ export function mp3DurationSeconds(buf: Buffer): number | null {
     pos = afterTag > pos ? afterTag : pos + 1;
   }
 
-  return frames > 0 ? Math.round(seconds) : null;
+  return frames > 0 ? seconds : null;
 }

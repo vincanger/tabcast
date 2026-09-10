@@ -1,7 +1,5 @@
 # Article to Podcast
 
-Read `SPEC.md` first. It holds every product decision. Do not re-litigate decisions there without asking.
-
 ## Layout
 
 - `app/` is the Wasp 0.25 app. It has its own `CLAUDE.md` with Wasp conventions. Run `wasp compile` inside `app/` to validate.

@@ -1,21 +1,23 @@
 import type { ExtStatusResponse, ParsedArticle, SaveArticleResponse } from "./types";
 
-// Defaults match `wasp start`. Both are editable from the popup.
-export const DEFAULT_SERVER_URL = "http://localhost:3001";
-export const DEFAULT_DASHBOARD_URL = "http://localhost:3000";
+// Baked in at build time from WXT_SERVER_URL and WXT_DASHBOARD_URL so a build
+// for your own deployment points at it out of the box. See .env.example. The
+// fallbacks match `wasp start`, and both stay editable from the popup.
+export const DEFAULT_SERVER_URL = import.meta.env.WXT_SERVER_URL || "http://localhost:3001";
+export const DEFAULT_DASHBOARD_URL = import.meta.env.WXT_DASHBOARD_URL || "http://localhost:3000";
 
 export type Settings = {
   serverUrl: string;
   dashboardUrl: string;
   sessionId: string | null;
-  email: string | null;
+  username: string | null;
 };
 
 const DEFAULTS: Settings = {
   serverUrl: DEFAULT_SERVER_URL,
   dashboardUrl: DEFAULT_DASHBOARD_URL,
   sessionId: null,
-  email: null,
+  username: null,
 };
 
 export async function getSettings(): Promise<Settings> {
@@ -70,20 +72,20 @@ async function request<T>(
         : null) ?? (text || `Request failed with ${res.status}`);
     if (res.status === 401) {
       // The session expired or was revoked. Forget it so the popup shows login.
-      await updateSettings({ sessionId: null, email: null });
+      await updateSettings({ sessionId: null, username: null });
     }
     throw new ApiError(message, res.status);
   }
   return json as T;
 }
 
-// Wasp's built in email auth endpoint. Returns the session id we send as a bearer token.
-export async function login(email: string, password: string): Promise<void> {
-  const { sessionId } = await request<{ sessionId: string }>("/auth/email/login", {
-    body: { email, password },
+// Wasp's built in username auth endpoint. Returns the session id we send as a bearer token.
+export async function login(username: string, password: string): Promise<void> {
+  const { sessionId } = await request<{ sessionId: string }>("/auth/username/login", {
+    body: { username, password },
     auth: false,
   });
-  await updateSettings({ sessionId, email });
+  await updateSettings({ sessionId, username });
 }
 
 export async function logout(): Promise<void> {
@@ -92,7 +94,7 @@ export async function logout(): Promise<void> {
   } catch {
     // Clear local state even if the server call fails.
   } finally {
-    await updateSettings({ sessionId: null, email: null });
+    await updateSettings({ sessionId: null, username: null });
   }
 }
 

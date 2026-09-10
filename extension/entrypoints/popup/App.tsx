@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getSettings, getStatus, login, logout, updateSettings, type Settings } from "@/utils/api";
 
-type View = { kind: "loading" } | { kind: "login" } | { kind: "status"; email: string | null; unusedCount: number };
+type View = { kind: "loading" } | { kind: "login" } | { kind: "status"; username: string | null; unusedCount: number };
 
 function App() {
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -30,10 +30,10 @@ function App() {
     }
   }
 
-  async function onLogin(email: string, password: string) {
+  async function onLogin(username: string, password: string) {
     setError(null);
     try {
-      await login(email, password);
+      await login(username, password);
       await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Login failed.");
@@ -52,7 +52,7 @@ function App() {
 
   return (
     <div className="popup">
-      <h1>Article to Podcast</h1>
+      <h1>Articles to Podcast</h1>
 
       {view.kind === "loading" && <p className="muted">Loading…</p>}
 
@@ -86,7 +86,7 @@ function App() {
             to generate an episode.
           </p>
           <div className="small">
-            <span className="muted">{view.email}</span> ·{" "}
+            <span className="muted">{view.username}</span> ·{" "}
             <button className="link" onClick={onLogout}>
               Log out
             </button>
@@ -104,8 +104,8 @@ function App() {
   );
 }
 
-function LoginForm({ onSubmit }: { onSubmit: (email: string, password: string) => Promise<void> }) {
-  const [email, setEmail] = useState("");
+function LoginForm({ onSubmit }: { onSubmit: (username: string, password: string) => Promise<void> }) {
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -115,19 +115,20 @@ function LoginForm({ onSubmit }: { onSubmit: (email: string, password: string) =
         e.preventDefault();
         setBusy(true);
         try {
-          await onSubmit(email, password);
+          await onSubmit(username, password);
         } finally {
           setBusy(false);
         }
       }}
     >
       <input
-        type="email"
-        placeholder="Email"
-        value={email}
+        type="text"
+        placeholder="Username"
+        value={username}
         autoFocus
         required
-        onChange={(e) => setEmail(e.target.value)}
+        autoComplete="username"
+        onChange={(e) => setUsername(e.target.value)}
       />
       <input
         type="password"

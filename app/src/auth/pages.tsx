@@ -1,10 +1,4 @@
-import {
-  ForgotPasswordForm,
-  LoginForm,
-  ResetPasswordForm,
-  SignupForm,
-  VerifyEmailForm,
-} from "wasp/client/auth";
+import { LoginForm, SignupForm } from "wasp/client/auth";
 import { Link } from "react-router";
 import { Card, CardContent } from "../components/ui/card";
 
@@ -44,10 +38,6 @@ export function LoginPage() {
         <Link to="/signup" className="underline">
           Sign up
         </Link>
-        . Forgot your password?{" "}
-        <Link to="/request-password-reset" className="underline">
-          Reset it
-        </Link>
         .
       </p>
     </AuthLayout>
@@ -62,44 +52,6 @@ export function SignupPage() {
         Already have an account?{" "}
         <Link to="/login" className="underline">
           Log in
-        </Link>
-        .
-      </p>
-    </AuthLayout>
-  );
-}
-
-export function EmailVerificationPage() {
-  return (
-    <AuthLayout>
-      <VerifyEmailForm appearance={appearance} />
-      <p className="text-sm text-muted-foreground">
-        Verified?{" "}
-        <Link to="/login" className="underline">
-          Go to login
-        </Link>
-        .
-      </p>
-    </AuthLayout>
-  );
-}
-
-export function RequestPasswordResetPage() {
-  return (
-    <AuthLayout>
-      <ForgotPasswordForm appearance={appearance} />
-    </AuthLayout>
-  );
-}
-
-export function PasswordResetPage() {
-  return (
-    <AuthLayout>
-      <ResetPasswordForm appearance={appearance} />
-      <p className="text-sm text-muted-foreground">
-        Done?{" "}
-        <Link to="/login" className="underline">
-          Go to login
         </Link>
         .
       </p>

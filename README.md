@@ -67,11 +67,13 @@ The extension never imports app code. It uses Wasp's built in auth endpoints and
 
 | Call | Purpose |
 | --- | --- |
-| `POST /auth/email/login` | Returns a session id, sent later as `Authorization: Bearer` |
+| `POST /auth/username/login` | Returns a session id, sent later as `Authorization: Bearer` |
 | `POST /auth/logout` | Ends the session |
-| `GET /api/ext/status` | Email and number of unused saves, used by the popup |
+| `GET /api/ext/status` | Username and number of unused saves, used by the popup |
 | `POST /api/ext/articles` | Saves a parsed article, returns `created` or `duplicate` |
 
 ## Deploying
 
-The Wasp app deploys like any other Wasp app (`wasp deploy fly` or Railway). Set the server env vars from `.env.server.example` on the host, replacing the MinIO values with a real S3 compatible bucket: your own credentials, and `S3_ENDPOINT` either unset for AWS or pointed at your provider. Then open the extension popup, expand Server settings, and point it at your deployed API and client URLs.
+The Wasp app deploys like any other Wasp app (`wasp deploy fly` or Railway). Set the server env vars from `.env.server.example` on the host, replacing the MinIO values with a real S3 compatible bucket: your own credentials, and `S3_ENDPOINT` either unset for AWS or pointed at your provider. Auth is username and password, so there is no email provider to configure.
+
+For the extension, copy `extension/.env.example` to `extension/.env`, set `WXT_SERVER_URL` and `WXT_DASHBOARD_URL` to your deployed URLs, and rebuild — the build then points at your instance out of the box. You can also leave the build alone and override both URLs under "Server settings" in the popup.

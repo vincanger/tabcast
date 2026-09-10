@@ -1,6 +1,7 @@
 import type { GenerateEpisodeJob } from "wasp/server/jobs";
-import { estimateDurationSeconds, narrate, writeScript } from "../lib/openai";
+import { estimateDurationSeconds, narrate, scriptText, writeScript } from "../lib/openai";
 import { mp3DurationSeconds } from "../lib/mp3";
+import { withChapterTags } from "../lib/id3";
 import { episodeAudioKey, uploadEpisodeAudio } from "../lib/s3";
 
 type Input = { episodeId: number };
@@ -31,26 +32,63 @@ export const generateEpisodeJob: GenerateEpisodeJob<Input, void> = async ({ epis
 
     console.log(`[generateEpisode] Writing script for episode ${episodeId} (${episode.articles.length} articles, ${episode.targetMinutes} min).`);
     await Episode.update({ where: { id: episodeId }, data: { phase: "writing" } });
-    const { title, script } = await writeScript(episode.articles, episode.targetMinutes);
+    const script = await writeScript(episode.articles, episode.targetMinutes);
+    const text = scriptText(script);
 
-    console.log(`[generateEpisode] Narrating episode ${episodeId} (${script.length} chars).`);
+    console.log(`[generateEpisode] Narrating episode ${episodeId} (${text.length} chars).`);
     await Episode.update({ where: { id: episodeId }, data: { phase: "recording" } });
-    const audio = await narrate(script);
 
-    // Prefer the real length of the audio; the word count estimate is only a
-    // fallback for a file we could not read frame headers from.
-    const durationSeconds = mp3DurationSeconds(audio) ?? estimateDurationSeconds(script);
+    // Narrate the intro, each article's segment, and the sign off separately so
+    // each part can be measured. The total before an article is where its
+    // chapter starts.
+    const parts = [script.intro, ...script.segments, script.outro];
+    const buffers: Buffer[] = [];
+    const seconds: number[] = [];
+    for (const part of parts) {
+      const audio = await narrate(part);
+      buffers.push(audio);
+      seconds.push(mp3DurationSeconds(audio) ?? 0);
+    }
+    const measured = seconds.reduce((a, b) => a + b, 0);
+    // The word count estimate is only a fallback for audio we could not read.
+    const durationSeconds = measured > 0 ? Math.round(measured) : estimateDurationSeconds(text);
+
+    // Chapter marks travel inside the file too. Apple Podcasts reads those from
+    // the MP3 itself, which works for a private feed it fetches directly.
+    const audio = withChapterTags(Buffer.concat(buffers), {
+      title: script.title,
+      parts: parts.map((part, i) => ({
+        title: i === 0 ? "Introduction" : i <= episode.articles.length ? episode.articles[i - 1].title : "Sign off",
+        seconds: seconds[i],
+        empty: !part.trim(),
+      })),
+    });
 
     const audioKey = episodeAudioKey(episode.userId, episodeId);
     await uploadEpisodeAudio(audioKey, audio);
+
+    // Segments are written one per article, so the parts line up. An article
+    // whose segment came back empty has no chapter of its own.
+    let at = seconds[0];
+    for (let i = 0; i < episode.articles.length; i++) {
+      if (script.segments[i].trim()) {
+        await Article.update({
+          where: { id: episode.articles[i].id },
+          data: { startSeconds: Math.round(at) },
+        });
+      } else {
+        console.warn(`[generateEpisode] Episode ${episodeId}: article ${episode.articles[i].id} got no narration.`);
+      }
+      at += seconds[i + 1];
+    }
 
     await Episode.update({
       where: { id: episodeId },
       data: {
         status: "ready",
         phase: null,
-        title,
-        script,
+        title: script.title,
+        script: text,
         audioKey,
         audioBytes: audio.length,
         durationSeconds,
@@ -62,7 +100,7 @@ export const generateEpisodeJob: GenerateEpisodeJob<Input, void> = async ({ epis
     const message = err instanceof Error ? err.message : String(err);
     console.error(`[generateEpisode] Episode ${episodeId} failed: ${message}`);
     // Return the articles to the inbox so the user can try again.
-    await Article.updateMany({ where: { episodeId }, data: { episodeId: null } });
+    await Article.updateMany({ where: { episodeId }, data: { episodeId: null, startSeconds: null } });
     await Episode.update({
       where: { id: episodeId },
       data: { status: "failed", phase: null, error: message, completedAt: new Date() },

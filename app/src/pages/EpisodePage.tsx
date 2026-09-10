@@ -1,16 +1,19 @@
+import { useRef } from "react";
 import { Link, useParams } from "react-router";
 import { getEpisode, useQuery } from "wasp/client/operations";
 import { StatusBadge, formatDuration, isInFlight, pollWhileInFlight } from "../components/episode";
-import { AudioPlayer } from "../components/AudioPlayer";
+import { AudioPlayer, type AudioPlayerHandle } from "../components/AudioPlayer";
 import { EpisodeCover } from "../components/EpisodeCover";
 import { GenerationSteps } from "../components/GenerationSteps";
 import { SourceIcon } from "../components/SourceIcon";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { Skeleton } from "../components/ui/skeleton";
+import { chaptersFor } from "../shared/chapters";
 
 export function EpisodePage() {
   const { id } = useParams<{ id: string }>();
   const episodeId = Number(id);
+  const playerRef = useRef<AudioPlayerHandle>(null);
 
   const { data: episode, isLoading, error } = useQuery(
     getEpisode,
@@ -37,6 +40,7 @@ export function EpisodePage() {
 
   const inFlight = isInFlight(episode.status);
   const sources = episode.articles.map((a) => a.url);
+  const ready = episode.status === "ready" && !!episode.audioUrl;
 
   return (
     <article className="space-y-8">
@@ -79,7 +83,12 @@ export function EpisodePage() {
       )}
       {episode.status === "ready" && episode.audioUrl && (
         <div className="animate-in fade-in slide-in-from-bottom-2">
-          <AudioPlayer src={episode.audioUrl} title={episode.title} />
+          <AudioPlayer
+            ref={playerRef}
+            src={episode.audioUrl}
+            title={episode.title}
+            chapters={chaptersFor(episode.articles)}
+          />
         </div>
       )}
 
@@ -102,6 +111,16 @@ export function EpisodePage() {
                   {a.siteName ?? new URL(a.url).hostname}
                 </p>
               </div>
+              {ready && a.startSeconds !== null && (
+                <button
+                  type="button"
+                  onClick={() => playerRef.current?.seek(a.startSeconds!)}
+                  aria-label={`Play from ${formatDuration(a.startSeconds)}`}
+                  className="kicker ml-auto shrink-0 tabular-nums hover:text-rubric"
+                >
+                  ▶ {formatDuration(a.startSeconds)}
+                </button>
+              )}
             </li>
           ))}
         </ul>

@@ -34,6 +34,8 @@ model Article {
   // Set once the article has been included in an episode.
   episode     Episode? @relation(fields: [episodeId], references: [id], onDelete: SetNull)
   episodeId   Int?
+  // Where this article's segment starts in the episode audio. Set by the job.
+  startSeconds Int?
 
   @@unique([userId, url])
   @@index([userId, episodeId])

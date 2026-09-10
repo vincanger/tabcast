@@ -69,7 +69,7 @@ export const getEpisodes: GetEpisodes<void, EpisodeSummary[]> = async (_args, co
 
 export type EpisodeDetail = Omit<Episode, "audioKey" | "userId"> & {
   audioUrl: string | null;
-  articles: Pick<Article, "id" | "url" | "title" | "siteName">[];
+  articles: Pick<Article, "id" | "url" | "title" | "siteName" | "startSeconds">[];
 };
 
 export const getEpisode: GetEpisode<{ id: number }, EpisodeDetail> = async ({ id }, context) => {
@@ -78,7 +78,7 @@ export const getEpisode: GetEpisode<{ id: number }, EpisodeDetail> = async ({ id
     where: { id, userId: context.user.id },
     include: {
       articles: {
-        select: { id: true, url: true, title: true, siteName: true },
+        select: { id: true, url: true, title: true, siteName: true, startSeconds: true },
         orderBy: { savedAt: "asc" },
       },
     },

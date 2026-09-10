@@ -73,14 +73,14 @@ export const saveArticleApi: SaveArticleApi<never, SaveArticleResponse, SaveArti
   res.status(201).json({ result: "created", articleId: article.id });
 };
 
-export type ExtStatusResponse = { email: string | null; unusedCount: number };
+export type ExtStatusResponse = { username: string | null; unusedCount: number };
 
 export const extStatusApi: ExtStatusApi<never, ExtStatusResponse> = async (_req, res, context) => {
   if (!context.user) throw new HttpError(401);
   const unusedCount = await context.entities.Article.count({
     where: { userId: context.user.id, episodeId: null },
   });
-  res.json({ email: context.user.identities.email?.id ?? null, unusedCount });
+  res.json({ username: context.user.identities.username?.id ?? null, unusedCount });
 };
 
 // Strip fragments and common tracking params so the same article saved from

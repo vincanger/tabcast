@@ -17,28 +17,60 @@ export type ScriptSource = {
   textContent: string;
 };
 
-export type GeneratedScript = { title: string; script: string };
+// The script is written and kept in parts. Each article's segment is its own
+// model call, which does two things: a small model reliably hits a few hundred
+// words where it undershoots a fifteen hundred word script, and every segment
+// maps to exactly one article, which is what the chapter marks need.
+export type GeneratedScript = {
+  title: string;
+  intro: string;
+  // One entry per source, in the order given.
+  segments: string[];
+  outro: string;
+};
+
+export function scriptText(script: GeneratedScript): string {
+  return [script.intro, ...script.segments, script.outro].filter((p) => p.trim()).join("\n\n");
+}
 
 // Structured outputs. The older `json_object` format additionally requires the
 // word "json" inside the input messages, which `instructions` does not count as
 // on the Responses API, and it does not guarantee the fields come back.
-const SCRIPT_FORMAT = {
+const FRAME_FORMAT = {
   type: "json_schema" as const,
-  name: "episode_script",
+  name: "episode_frame",
   strict: true,
   schema: {
     type: "object",
     properties: {
       title: { type: "string", description: "Episode title, at most eight words." },
-      script: { type: "string", description: "The full narration, spoken word for word." },
+      intro: { type: "string", description: "The opening narration, before the first article." },
+      outro: { type: "string", description: "The closing narration, after the last article." },
     },
-    required: ["title", "script"],
+    required: ["title", "intro", "outro"],
     additionalProperties: false,
   },
 };
 
-// A draft shorter than this fraction of the target gets one expansion pass.
+const SEGMENT_FORMAT = {
+  type: "json_schema" as const,
+  name: "episode_segment",
+  strict: true,
+  schema: {
+    type: "object",
+    properties: {
+      narration: { type: "string", description: "The narration for this article, spoken word for word." },
+    },
+    required: ["narration"],
+    additionalProperties: false,
+  },
+};
+
+// A segment shorter than this fraction of its budget gets one expansion pass.
 const MIN_FILL_RATIO = 0.85;
+
+// Words reserved for the intro and sign off together.
+const FRAME_WORDS = 60;
 
 export function wordCount(text: string): number {
   return text.split(/\s+/).filter(Boolean).length;
@@ -48,104 +80,117 @@ export function wordCount(text: string): number {
 // buy more and longer quotes rather than more padding around them.
 function budget(targetMinutes: number, sourceCount: number) {
   const targetWords = targetMinutes * WORDS_PER_MINUTE;
-  const perArticleWords = Math.max(90, Math.floor((targetWords * 0.85) / sourceCount));
+  const perArticleWords = Math.max(90, Math.floor((targetWords - FRAME_WORDS) / sourceCount));
   const quotesPerArticle = Math.min(4, Math.max(1, Math.round(perArticleWords / 110)));
   const quoteLength = perArticleWords > 260 ? "two to four sentences" : "one or two sentences";
-  return { targetWords, perArticleWords, quotesPerArticle, quoteLength };
+  return { perArticleWords, quotesPerArticle, quoteLength };
 }
 
-function describeSources(sources: ScriptSource[]): string {
-  return sources
-    .map((s, i) => {
-      const meta = [
-        s.byline ? `By ${s.byline}` : null,
-        s.siteName ? `Published on ${s.siteName}` : null,
-      ]
-        .filter(Boolean)
-        .join(". ");
-      return [
-        `### Article ${i + 1}: ${s.title}`,
-        meta || null,
-        truncate(s.textContent, MAX_CHARS_PER_ARTICLE),
-      ]
-        .filter(Boolean)
-        .join("\n");
-    })
-    .join("\n\n");
+type Budget = ReturnType<typeof budget>;
+
+function describeSource(s: ScriptSource, index: number): string {
+  const meta = [s.byline ? `By ${s.byline}` : null, s.siteName ? `Published on ${s.siteName}` : null]
+    .filter(Boolean)
+    .join(". ");
+  return [`### Article ${index + 1}: ${s.title}`, meta || null, truncate(s.textContent, MAX_CHARS_PER_ARTICLE)]
+    .filter(Boolean)
+    .join("\n");
 }
+
+const VOICE = [
+  "Speak in plain, conversational English. Write only what the narrator says. No headings, no bullet points, no markdown, no stage directions, no music cues.",
+  "Do not mention that you are an AI.",
+];
 
 export async function writeScript(
   sources: ScriptSource[],
   targetMinutes: number,
 ): Promise<GeneratedScript> {
-  const { targetWords, perArticleWords, quotesPerArticle, quoteLength } = budget(
-    targetMinutes,
-    sources.length,
-  );
-  const articlesBlock = describeSources(sources);
+  const b = budget(targetMinutes, sources.length);
+  const [frame, ...segments] = await Promise.all([
+    writeFrame(sources, targetMinutes),
+    ...sources.map((source, i) => writeSegment(source, i, sources.length, b)),
+  ]);
+  if (segments.every((s) => !s.trim())) throw new Error("The model returned an empty script.");
+  return { ...frame, segments };
+}
+
+// Title, intro and sign off, from the article list alone.
+async function writeFrame(
+  sources: ScriptSource[],
+  targetMinutes: number,
+): Promise<{ title: string; intro: string; outro: string }> {
+  const list = sources
+    .map((s, i) => {
+      const who = s.byline ? ` by ${s.byline}` : s.siteName ? ` from ${s.siteName}` : "";
+      return `${i + 1}. ${s.title}${who}`;
+    })
+    .join("\n");
 
   const instructions = [
-    "You write scripts for a short, single narrator podcast that summarizes articles the listener saved.",
-    `The script is read aloud at about ${WORDS_PER_MINUTE} words per minute, so a ${targetMinutes} minute episode needs about ${targetWords} words.`,
-    `Write at least ${Math.round(targetWords * 0.9)} words. Keep going until you reach that length instead of wrapping up early.`,
-    `Give each article about ${perArticleWords} words.`,
-    "Structure: a one or two sentence intro that says how many articles are covered, then one segment per article in the order given, then a one sentence sign off.",
-    "Each segment starts by naming the article title and its author, or the publication when no author is given, then explains the key points and why they matter.",
-    `Quote the source in every segment. Include at least ${quotesPerArticle} direct quote${quotesPerArticle === 1 ? "" : "s"} from each article, each ${quoteLength} long.`,
+    "You write the opening and closing of a short, single narrator podcast that summarizes articles the listener saved. The article segments themselves are written separately.",
+    "The intro is one or two sentences that say how many articles are covered and preview them in a phrase or two. The sign off is one sentence.",
+    "Give the episode a title of at most eight words.",
+    ...VOICE,
+  ].join(" ");
+
+  const response = await client.responses.create({
+    model: env.OPENAI_SCRIPT_MODEL,
+    instructions,
+    input: `Articles in this ${targetMinutes} minute episode:\n${list}`,
+    text: { format: FRAME_FORMAT },
+  });
+  return parseFrame(response.output_text);
+}
+
+// One article's segment, given only that article.
+async function writeSegment(
+  source: ScriptSource,
+  index: number,
+  count: number,
+  { perArticleWords, quotesPerArticle, quoteLength }: Budget,
+): Promise<string> {
+  const article = describeSource(source, index);
+  const instructions = [
+    "You write one segment of a short, single narrator podcast that summarizes articles the listener saved.",
+    `This is article ${index + 1} of ${count}. The segment is read aloud at about ${WORDS_PER_MINUTE} words per minute and should be about ${perArticleWords} words.`,
+    `Write at least ${Math.round(perArticleWords * 0.9)} words. Keep going until you reach that length instead of wrapping up early.`,
+    "Start by naming the article title and its author, or the publication when no author is given, then explain the key points and why they matter.",
+    `Include at least ${quotesPerArticle} direct quote${quotesPerArticle === 1 ? "" : "s"} from the article, each ${quoteLength} long.`,
     "Copy every quote word for word from the article text. Never invent, trim or paraphrase a quote.",
     "Choose quotes that are surprising, opinionated, or memorable. Skip generic scene setting.",
     "Lead into each quote so the listener knows whose words they are, for example: as she puts it, or in his words.",
-    "Speak in plain, conversational English. Write only what the narrator says. No headings, no bullet points, no markdown, no stage directions, no music cues.",
-    "Do not mention that you are an AI.",
-    "Give the episode a title of at most eight words.",
+    "Write only this article's segment. No episode introduction, no sign off, no mention of the other articles.",
+    ...VOICE,
   ].join(" ");
 
-  const response = await client.responses.create({
+  const first = await client.responses.create({
     model: env.OPENAI_SCRIPT_MODEL,
     instructions,
-    input: articlesBlock,
-    text: { format: SCRIPT_FORMAT },
+    input: article,
+    text: { format: SEGMENT_FORMAT },
   });
+  const draft = parseNarration(first.output_text);
+  const words = wordCount(draft);
+  if (words >= perArticleWords * MIN_FILL_RATIO) return draft;
 
-  const draft = parseScriptJson(response.output_text);
-  if (!draft.script.trim()) throw new Error("The model returned an empty script.");
-
-  const words = wordCount(draft.script);
-  if (words >= targetWords * MIN_FILL_RATIO) return draft;
-
-  // Models routinely undershoot a long target on the first pass, which is what
-  // makes an eight minute episode come out at four. Ask once for the rest.
-  console.log(`[writeScript] Draft was ${words} words, expanding toward ${targetWords}.`);
-  const expanded = await expandScript(draft, articlesBlock, targetWords, quoteLength);
-  return wordCount(expanded.script) > words
-    ? { title: draft.title || expanded.title, script: expanded.script }
-    : draft;
-}
-
-async function expandScript(
-  draft: GeneratedScript,
-  articlesBlock: string,
-  targetWords: number,
-  quoteLength: string,
-): Promise<GeneratedScript> {
-  const instructions = [
-    "You lengthen an existing podcast script without changing its voice or structure.",
-    `The script must reach about ${targetWords} words. It is currently ${wordCount(draft.script)} words, which is too short.`,
-    `Add depth to each segment: more of the article's reasoning and examples, and more direct quotes of ${quoteLength} each.`,
-    "Copy every quote word for word from the article text. Never invent a quote.",
-    "Keep the existing intro, the order of the segments, and the sign off. Do not repeat sentences to pad the length.",
-    "Keep the same episode title.",
-  ].join(" ");
-
-  const response = await client.responses.create({
+  // Small models routinely stop early. Ask once for the rest.
+  console.log(`[writeScript] Segment ${index + 1} was ${words} words, expanding toward ${perArticleWords}.`);
+  const second = await client.responses.create({
     model: env.OPENAI_SCRIPT_MODEL,
-    instructions,
-    input: `# Current script\n${draft.script}\n\n# Source articles\n${articlesBlock}`,
-    text: { format: SCRIPT_FORMAT },
+    instructions: [
+      "You lengthen one segment of a podcast script without changing its voice or structure.",
+      `The segment must reach about ${perArticleWords} words. It is currently ${words} words, which is too short.`,
+      `Add depth: more of the article's reasoning and examples, and more direct quotes of ${quoteLength} each, copied word for word from the article. Never invent a quote.`,
+      "Keep the opening that names the article. Do not repeat sentences to pad the length.",
+      ...VOICE,
+    ].join(" "),
+    input: `# Current segment\n${draft}\n\n# Source article\n${article}`,
+    text: { format: SEGMENT_FORMAT },
   });
-
-  const expanded = parseScriptJson(response.output_text);
-  return expanded.script.trim() ? expanded : draft;
+  const expanded = parseNarration(second.output_text);
+  console.log(`[writeScript] Segment ${index + 1} expanded to ${wordCount(expanded)} words.`);
+  return wordCount(expanded) > words ? expanded : draft;
 }
 
 // OpenAI text to speech accepts at most 4096 characters per request.
@@ -168,21 +213,34 @@ export async function narrate(script: string): Promise<Buffer> {
 }
 
 export function estimateDurationSeconds(script: string): number {
-  const words = script.split(/\s+/).filter(Boolean).length;
+  const words = wordCount(script);
   return Math.round((words / WORDS_PER_MINUTE) * 60);
 }
 
-function parseScriptJson(raw: string): GeneratedScript {
+function parseFrame(raw: string): { title: string; intro: string; outro: string } {
   try {
-    const obj = JSON.parse(raw) as { title?: unknown; script?: unknown };
+    const obj = JSON.parse(raw) as Record<string, unknown>;
     return {
-      title: typeof obj.title === "string" && obj.title.trim() ? obj.title.trim() : "Your saved articles",
-      script: typeof obj.script === "string" ? obj.script.trim() : "",
+      title: str(obj.title) || "Your saved articles",
+      intro: str(obj.intro),
+      outro: str(obj.outro),
     };
   } catch {
-    // Fall back to treating the whole output as the script.
-    return { title: "Your saved articles", script: raw.trim() };
+    return { title: "Your saved articles", intro: raw.trim(), outro: "" };
   }
+}
+
+function parseNarration(raw: string): string {
+  try {
+    return str((JSON.parse(raw) as Record<string, unknown>).narration);
+  } catch {
+    // Fall back to treating the whole output as the narration.
+    return raw.trim();
+  }
+}
+
+function str(v: unknown): string {
+  return typeof v === "string" ? v.trim() : "";
 }
 
 function truncate(text: string, maxChars: number): string {

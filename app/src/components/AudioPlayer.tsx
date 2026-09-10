@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
 import { Download, Loader2, Pause, Play } from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "../lib/utils";
+import type { Chapter } from "../shared/chapters";
 
 const BARS = 72;
 
@@ -58,7 +59,20 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-export function AudioPlayer({ src, title }: { src: string; title: string }) {
+// Lets the page seek the player, for example from a source's start time.
+export type AudioPlayerHandle = { seek: (seconds: number) => void };
+
+export function AudioPlayer({
+  src,
+  title,
+  chapters = [],
+  ref,
+}: {
+  src: string;
+  title: string;
+  chapters?: Chapter[];
+  ref?: Ref<AudioPlayerHandle>;
+}) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const peaks = useWaveform(src);
 
@@ -70,6 +84,16 @@ export function AudioPlayer({ src, title }: { src: string; title: string }) {
 
   const speed = SPEEDS[speedIndex];
   const progress = duration > 0 ? current / duration : 0;
+  const currentChapter = chapters.filter((c) => c.startSeconds <= current).at(-1);
+
+  useImperativeHandle(ref, () => ({
+    seek(seconds: number) {
+      const audio = audioRef.current;
+      if (!audio) return;
+      audio.currentTime = seconds;
+      void audio.play();
+    },
+  }));
 
   function toggle() {
     const audio = audioRef.current;
@@ -141,6 +165,7 @@ export function AudioPlayer({ src, title }: { src: string; title: string }) {
       </button>
 
       <div className="min-w-0 flex-1">
+        <div className="relative">
         <div
           role="slider"
           aria-label="Seek"
@@ -174,8 +199,23 @@ export function AudioPlayer({ src, title }: { src: string; title: string }) {
             );
           })}
         </div>
-        <div className="kicker mt-1 flex justify-between tabular-nums">
+        {duration > 0 &&
+          chapters
+            .filter((c) => c.startSeconds > 0)
+            .map((c) => (
+              <span
+                key={c.startSeconds}
+                aria-hidden
+                className="pointer-events-none absolute inset-y-1 w-px bg-foreground/60"
+                style={{ left: `${(c.startSeconds / duration) * 100}%` }}
+              />
+            ))}
+        </div>
+        <div className="kicker mt-1 flex items-baseline justify-between gap-3 tabular-nums">
           <span>{formatTime(current)}</span>
+          {currentChapter && (
+            <span className="min-w-0 truncate text-foreground">{currentChapter.title}</span>
+          )}
           <span>{formatTime(duration)}</span>
         </div>
       </div>
