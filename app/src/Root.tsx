@@ -35,7 +35,7 @@ export function Root() {
                   Episodes
                 </NavLink>
                 <span className="hidden normal-case tracking-normal sm:inline">
-                  {user.identities.email?.id}
+                  {user.identities.username?.id}
                 </span>
                 <button type="button" onClick={() => logout()} className="kicker hover:text-foreground">
                   Log out
