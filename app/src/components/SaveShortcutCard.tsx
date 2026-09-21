@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Check, Copy, Download, RefreshCw, Smartphone } from "lucide-react";
 import { getSaveShortcut, rotateSaveToken, useQuery } from "wasp/client/operations";
 import { Button } from "./ui/button";
+import { IconSwap } from "./IconSwap";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 
 // A ready made Shortcut, shared from iCloud. It ships with a placeholder URL;
@@ -63,7 +64,12 @@ export function SaveShortcutCard() {
                 className="min-w-0 flex-1 rounded-lg border bg-background px-3 py-2 font-mono text-sm"
               />
               <Button variant="outline" onClick={() => copy(shortcut.url!)}>
-                {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+                <IconSwap
+                  active={copied}
+                  className="size-4"
+                  activeIcon={<Check className="size-4" />}
+                  inactiveIcon={<Copy className="size-4" />}
+                />
                 {copied ? "Copied" : "Copy"}
               </Button>
               <Button variant="ghost" onClick={rotate} disabled={busy}>
@@ -75,7 +81,7 @@ export function SaveShortcutCard() {
               Anyone with this link can add articles to your inbox. Regenerate it if you lose your
               phone, then update the Shortcut.
             </p>
-            <ol className="list-decimal space-y-2 pl-5 text-sm">
+            <ol className="list-decimal space-y-2 ps-5 text-sm">
               <li>
                 <a
                   href={SHORTCUT_URL}

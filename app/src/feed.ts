@@ -119,12 +119,12 @@ function buildFeed(token: string, episodes: FeedEpisode[]): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:podcast="https://podcastindex.org/namespace/1.0">
   <channel>
-    <title>Article to Podcast</title>
+    <title>Tabcast</title>
     <link>${escapeXml(config.frontendUrl)}</link>
     <atom:link href="${escapeXml(feedUrl(token))}" rel="self" type="application/rss+xml"/>
     <description>Narrated digests of the articles you saved.</description>
     <language>en</language>
-    <itunes:author>Article to Podcast</itunes:author>
+    <itunes:author>Tabcast</itunes:author>
     <itunes:image href="${escapeXml(ARTWORK_URL)}"/>
     <itunes:category text="News"/>
     <itunes:explicit>false</itunes:explicit>

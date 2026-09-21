@@ -1,4 +1,4 @@
-# Article to Podcast
+# Tabcast
 
 Save articles from Chrome with one click. Generate a short narrated podcast that summarizes everything you saved since the last episode.
 
@@ -14,6 +14,24 @@ docker-compose.yml  Local S3 (MinIO) for development
 ```
 
 **Flow.** Click the extension icon on any article, or share it from an iPhone to a Shortcut that reads the page with Safari Reader. The content script runs Mozilla Readability on the page and posts the text to the Wasp backend. In the dashboard, pick a target length and click Generate — or push the slider to its last stop to have the articles read aloud in full, capped at 90 minutes since text to speech is priced per character — or turn on a schedule that checks the inbox every day or week at a time you choose and generates only when enough is saved. A background job asks OpenAI for a single narrator script, records it with OpenAI text to speech, uploads the MP3 to S3, and the episode page shows the player, the script, and links to the sources.
+
+## Get the extension
+
+The extension isn't on the Chrome Web Store yet, so it loads as an unpacked extension.
+
+1. Download the zip from the [latest release](https://github.com/vincanger/tabcast/releases/latest) and unzip it. Or build it yourself: `cd extension && npm install && npm run build` produces `extension/.output/chrome-mv3`.
+2. Open `chrome://extensions`, turn on **Developer mode** (top right), click **Load unpacked**, and pick the folder.
+3. Pin the icon from the puzzle piece menu and click it once to open the popup.
+
+Chrome reminds you about developer mode extensions on each launch until the Web Store listing is live; that's expected.
+
+### Point it at a server
+
+The popup's **Server settings** take an API server URL and a dashboard URL. Two options:
+
+- **Use the hosted demo.** Sign up on the demo dashboard, then in Server settings click *use the hosted demo* (or enter the URLs by hand) and log in.
+  <!-- TODO (AGENT): fill in the demo dashboard and API URLs here once deployed. They also go in extension/utils/api.ts and extension/.env.example. -->
+- **Use your own deployment.** Enter the URLs of your deployed server and client. On Fly those are the two apps `wasp deploy fly launch <name>` creates: `https://<name>-server.fly.dev` and `https://<name>-client.fly.dev`. To ship a build with them pre-filled, see [Deploying](#deploying).
 
 ## Run it locally
 

@@ -4,12 +4,12 @@ import { defineConfig } from "wxt";
 export default defineConfig({
   modules: ["@wxt-dev/module-react"],
   manifest: {
-    name: "Article to Podcast",
+    name: "Tabcast",
     description: "Save articles with one click and turn them into a narrated podcast.",
     permissions: ["storage", "activeTab", "scripting", "contextMenus"],
     // The service worker calls the Wasp backend, and the content script parses
     // any page the user saves. Both need broad host access.
     host_permissions: ["<all_urls>"],
-    action: { default_title: "Save article to podcast" },
+    action: { default_title: "Save Tabcast" },
   },
 });

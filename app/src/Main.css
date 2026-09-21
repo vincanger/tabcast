@@ -3,45 +3,47 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/inter";
 @import "@fontsource-variable/newsreader";
+@import "@fontsource-variable/fraunces";
 
 @custom-variant dark (&:is(.dark *));
 
 :root {
   /* Paper and ink. One warm cream sheet for everything; emphasis comes from
      rules and type weight rather than surfaces, shadows or radii. */
-  --background: oklch(0.965 0.012 85);
-  --foreground: oklch(0.2 0.02 60);
-  --card: oklch(0.965 0.012 85);
-  --card-foreground: oklch(0.2 0.02 60);
-  --popover: oklch(0.975 0.01 85);
-  --popover-foreground: oklch(0.2 0.02 60);
+  --background: oklch(0.985 0.005 251);
+  --foreground: oklch(0.2 0.02 226);
+  --card: oklch(0.985 0.005 251);
+  --card-foreground: oklch(0.2 0.02 226);
+  --popover: oklch(0.99 0.004 251);
+  --popover-foreground: oklch(0.2 0.02 226);
   /* Primary is ink: filled buttons are black on cream. */
-  --primary: oklch(0.2 0.02 60);
-  --primary-foreground: oklch(0.965 0.012 85);
+  --primary: oklch(0.2 0.02 226);
+  --primary-foreground: oklch(0.985 0.005 251);
   /* A slightly deeper tint for boxed features like the generate panel. */
-  --secondary: oklch(0.935 0.016 80);
-  --secondary-foreground: oklch(0.2 0.02 60);
-  --muted: oklch(0.935 0.016 80);
-  --muted-foreground: oklch(0.45 0.02 60);
-  --accent: oklch(0.92 0.018 78);
-  --accent-foreground: oklch(0.2 0.02 60);
-  /* Oxblood. Red ink for links, the live step, and the played waveform. */
-  --rubric: oklch(0.48 0.17 25);
+  --secondary: oklch(0.955 0.009 246);
+  --secondary-foreground: oklch(0.2 0.02 226);
+  --muted: oklch(0.955 0.009 246);
+  --muted-foreground: oklch(0.45 0.02 226);
+  --accent: oklch(0.94 0.01 246);
+  --accent-foreground: oklch(0.2 0.02 226);
+  /* Teal. Links, the active nav item, the live step and the played waveform.
+     Lightness 0.51 measures 5.29:1 on the page and 4.85:1 on the panel. */
+  --rubric: oklch(0.51 0.085 200);
   /* Brick, kept more than 15 degrees of hue away from the rubric so a failed
      badge and a delete hover never read as a link. */
   --destructive: oklch(0.48 0.13 45);
-  --border: oklch(0.2 0.02 60 / 18%);
+  --border: oklch(0.2 0.02 226 / 18%);
   /* Solid, not tinted: a control edge has to reach 3:1 on both the sheet and
      the secondary panel. Measured 3.58:1 and 3.27:1. */
-  --input: oklch(0.6 0.02 60);
-  --ring: oklch(0.48 0.17 25);
+  --input: oklch(0.6 0.02 226);
+  --ring: oklch(0.51 0.085 200);
   --chart-1: oklch(0.2 0.02 60);
   --chart-2: oklch(0.48 0.17 25);
   --chart-3: oklch(0.45 0.02 60);
   --chart-4: oklch(0.65 0.02 60);
   --chart-5: oklch(0.8 0.015 70);
   /* Sharp edges everywhere. Every component radius derives from this. */
-  --radius: 0rem;
+  --radius: 0.125rem;
   --sidebar: oklch(0.965 0.012 85);
   --sidebar-foreground: oklch(0.2 0.02 60);
   --sidebar-primary: oklch(0.2 0.02 60);
@@ -53,7 +55,7 @@
 }
 
 @theme inline {
-  --font-heading: var(--font-serif);
+  --font-heading: 'Fraunces Variable', Georgia, serif;
   --font-serif: 'Newsreader Variable', Georgia, 'Times New Roman', serif;
   --font-sans: 'Inter Variable', system-ui, sans-serif;
   --color-rubric: var(--rubric);

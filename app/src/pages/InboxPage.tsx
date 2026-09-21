@@ -10,20 +10,22 @@ import {
 } from "wasp/client/operations";
 import {
   DEFAULT_MINUTES,
-  FULL_READ,
   FULL_READ_MAX_MINUTES,
+  MAX_MINUTES,
   MIN_MINUTES,
   estimateMinutes,
+  type EpisodeMode,
 } from "../shared/constants";
 import { isInFlight, pollWhileAnyInFlight } from "../components/episode";
 import { GenerationSteps } from "../components/GenerationSteps";
-import { SaveShortcutCard } from "../components/SaveShortcutCard";
-import { ScheduleToggle } from "../components/ScheduleToggle";
+import { InlineSelect } from "../components/InlineSelect";
+import { useScheduleSentence } from "../components/ScheduleToggle";
 import { SourceIcon } from "../components/SourceIcon";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { Button } from "../components/ui/button";
 import { Skeleton } from "../components/ui/skeleton";
-import { Slider } from "../components/ui/slider";
+import { useEnterOnce } from "../lib/enterOnce";
+import { cn } from "../lib/utils";
 
 export function InboxPage() {
   const inbox = useQuery(getInbox);
@@ -31,7 +33,9 @@ export function InboxPage() {
     // Poll while an episode is being generated so the progress updates.
     refetchInterval: pollWhileAnyInFlight,
   });
+  const enter = useEnterOnce("inbox");
 
+  const [mode, setMode] = useState<EpisodeMode>("summary");
   const [minutes, setMinutes] = useState(DEFAULT_MINUTES);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -40,12 +44,14 @@ export function InboxPage() {
   const latestFailed = episodes.data?.[0]?.status === "failed" ? episodes.data[0] : null;
   const articles = inbox.data ?? [];
 
-  // The slider's last stop reads everything verbatim, so the length is the
-  // inbox's, not the user's. Show the estimate where the target would be.
-  const fullRead = minutes === FULL_READ;
+  // A full read narrates every article verbatim, so its length is the inbox's,
+  // not the user's. The sentence states the estimate instead of a target.
+  const fullRead = mode === "full";
   const fullMinutes = estimateMinutes(articles.reduce((n, a) => n + a.wordCount, 0));
   const overCap = fullRead && fullMinutes > FULL_READ_MAX_MINUTES;
   const canGenerate = articles.length > 0 && !inFlight && !busy && !overCap;
+
+  const schedule = useScheduleSentence({ minutes, fullRead });
 
   async function onGenerate() {
     setError(null);
@@ -68,8 +74,10 @@ export function InboxPage() {
     }
   }
 
+  const count = `${articles.length} article${articles.length === 1 ? "" : "s"}`;
+
   return (
-    <div className="space-y-10">
+    <div className="space-y-20">
       {inFlight ? (
         <div className="motion-safe:animate-in motion-safe:fade-in">
           <GenerationSteps
@@ -78,56 +86,67 @@ export function InboxPage() {
             articleCount={inFlight.articleCount}
           />
           <p className="kicker mt-3 text-center">
-            <Link to={`/episodes/`} className="inline-block py-1 hover:text-foreground">
+            <Link
+              to={`/episodes/${inFlight.id}`}
+              className="inline-block py-1 underline decoration-border underline-offset-4 hover:text-foreground"
+            >
               Open the episode page →
             </Link>
           </p>
         </div>
       ) : (
-        <div className="border bg-secondary p-6">
-          <div className="flex flex-wrap items-end gap-x-8 gap-y-6">
-            {/* Fixed width so the label and number can change without moving the row. */}
-            <div className="w-64 shrink-0">
-              <p className="kicker whitespace-nowrap">
-                {fullRead ? "Read in full · estimated" : "Target length"}
-              </p>
-              <p className="flex items-baseline gap-1.5 font-serif">
-                <span className={`text-6xl leading-none tabular-nums ${overCap ? "text-rubric" : ""}`}>
-                  {fullRead ? fullMinutes : minutes}
-                </span>
-                <span className="text-xl text-muted-foreground">min</span>
-              </p>
-            </div>
-            <div className="relative min-w-48 flex-1 pb-3">
-              <Slider
-                aria-label="Target length in minutes, or read in full at the end"
-                min={MIN_MINUTES}
-                max={FULL_READ}
-                step={1}
-                value={[minutes]}
-                onValueChange={([value]) => setMinutes(value)}
-              />
-              <span className="kicker absolute top-full right-0 mt-1">Full</span>
-            </div>
+        <section aria-label="Generate an episode">
+          <p className="font-heading text-[28px] leading-[1.35] font-normal text-balance">
+            Make a{" "}
+            {!fullRead && (
+              <>
+                <InlineSelect label="Episode length" value={minutes} onChange={(v) => setMinutes(Number(v))}>
+                  {Array.from({ length: MAX_MINUTES - MIN_MINUTES + 1 }, (_, i) => {
+                    const m = MIN_MINUTES + i;
+                    return (
+                      <option key={m} value={m}>
+                        {m} minute
+                      </option>
+                    );
+                  })}
+                </InlineSelect>{" "}
+              </>
+            )}
+            <InlineSelect label="Episode kind" value={mode} onChange={(v) => setMode(v as EpisodeMode)}>
+              <option value="summary">summary</option>
+              <option value="full">full reading</option>
+            </InlineSelect>{" "}
+            {fullRead ? "of" : "from"} the {count} below
+            {fullRead && articles.length > 0 && (
+              <>
+                {" "}
+                (about{" "}
+                <span className={cn("tabular-nums", overCap && "text-destructive")}>{fullMinutes} minutes</span>)
+              </>
+            )}
+            {schedule.clause}.
+          </p>
+
+          <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2">
             <Button
               size="lg"
-              className="kicker h-auto min-h-10 w-full py-2 text-center whitespace-normal text-primary-foreground sm:w-auto"
-              disabled={!canGenerate} onClick={onGenerate}>
-              {busy
-                ? "Starting…"
-                : fullRead
-                  ? `Read ${articles.length} article${articles.length === 1 ? "" : "s"} in full`
-                  : `Generate from ${articles.length} article${articles.length === 1 ? "" : "s"}`}
+              className="kicker h-auto min-h-10 bg-rubric py-2 text-center whitespace-normal text-background hover:bg-rubric/90"
+              disabled={!canGenerate}
+              onClick={onGenerate}
+            >
+              {busy ? "Starting…" : fullRead ? `Read ${count} in full` : `Generate from ${count}`}
             </Button>
+            {schedule.actions}
           </div>
+
           {overCap && (
-            <p className="mt-4 text-sm text-rubric">
-              A full read of everything here would run about {fullMinutes} minutes; the limit is{" "}
-              {FULL_READ_MAX_MINUTES}. Remove some articles or pick a length.
+            <p className="mt-4 text-sm text-destructive">
+              A full reading of everything here would run about {fullMinutes} minutes; the limit is{" "}
+              {FULL_READ_MAX_MINUTES}. Remove some articles or switch to a summary.
             </p>
           )}
-          <ScheduleToggle minutes={minutes} fullRead={fullRead} />
-        </div>
+          {schedule.error && <p className="mt-4 text-sm text-destructive">{schedule.error}</p>}
+        </section>
       )}
 
       {latestFailed && !inFlight && (
@@ -156,42 +175,48 @@ export function InboxPage() {
           <div className="mt-4 border px-6 py-12 text-center">
             <p className="font-serif text-xl">Nothing saved yet</p>
             <p className="mt-1 font-serif italic text-muted-foreground">
-              Click the extension icon on any article, or share it from your iPhone, to save it
-              here.
+              Articles arrive from the Chrome extension, or from your iPhone's share sheet.
+            </p>
+            <p className="kicker mt-4">
+              <Link to="/setup" className="inline-block py-1 underline decoration-border underline-offset-4 hover:text-foreground">
+                Set up the extension or your iPhone →
+              </Link>
             </p>
           </div>
         )}
         {articles.length > 0 && (
-          <ul className="divide-y">
+          <ul className="divide-y border-b">
             {articles.map((a, i) => (
               <li
                 key={a.id}
-                style={{ animationDelay: `${i * 45}ms` }}
-                className="group flex items-center gap-4 py-4 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:fill-mode-backwards"
+                style={enter ? { animationDelay: `${i * 45}ms` } : undefined}
+                className={cn(
+                  // A compact table row: favicon, title, words, date, delete.
+                  // Below sm the words and date stack under the title.
+                  "grid grid-cols-[24px_minmax(0,1fr)_36px] items-center gap-3 py-2",
+                  enter &&
+                    "motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:fill-mode-backwards",
+                )}
               >
-                <SourceIcon url={a.url} />
-                <div className="min-w-0 flex-1">
+                <SourceIcon url={a.url} className="size-6 rounded-sm" />
+                <div className="grid min-w-0 gap-x-4 gap-y-0.5 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
                   <a
                     href={a.url}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className="line-clamp-2 font-serif text-lg leading-snug hover:text-rubric"
+                    title={a.title}
+                    className="line-clamp-2 font-serif text-[19px] leading-snug hover:text-rubric sm:line-clamp-1"
                   >
                     {a.title}
                   </a>
-                  <p className="truncate font-serif italic text-muted-foreground">
-                    {a.byline ? `By ${a.byline} · ` : ""}
-                    {a.siteName ?? new URL(a.url).hostname}
-                  </p>
-                  <p className="kicker mt-0.5">
-                    {a.wordCount.toLocaleString()} words · {formatDate(a.savedAt)}
-                  </p>
+                  <span className="kicker whitespace-nowrap">{a.wordCount.toLocaleString()} words</span>
+                  <span className="kicker whitespace-nowrap">{formatDate(a.savedAt)}</span>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
                   aria-label={`Delete ${a.title}`}
-                  className="shrink-0 text-muted-foreground hover:text-destructive"
+                  className="text-muted-foreground hover:text-destructive"
                   onClick={() => onDelete(a.id)}
                   disabled={!!inFlight}
                 >
@@ -202,8 +227,6 @@ export function InboxPage() {
           </ul>
         )}
       </section>
-
-      <SaveShortcutCard />
     </div>
   );
 }

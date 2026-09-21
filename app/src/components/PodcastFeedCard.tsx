@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Check, Copy, RefreshCw, Rss } from "lucide-react";
 import { getFeed, rotateFeedToken, useQuery } from "wasp/client/operations";
 import { Button } from "./ui/button";
+import { IconSwap } from "./IconSwap";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 
 export function PodcastFeedCard() {
@@ -61,7 +62,12 @@ export function PodcastFeedCard() {
                 className="min-w-0 flex-1 rounded-lg border bg-background px-3 py-2 font-mono text-sm"
               />
               <Button variant="outline" onClick={() => copy(feed.url!)}>
-                {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+                <IconSwap
+                  active={copied}
+                  className="size-4"
+                  activeIcon={<Check className="size-4" />}
+                  inactiveIcon={<Copy className="size-4" />}
+                />
                 {copied ? "Copied" : "Copy"}
               </Button>
               <Button variant="ghost" onClick={rotate} disabled={busy}>

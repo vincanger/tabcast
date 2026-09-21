@@ -1,6 +1,6 @@
-# Article to Podcast — Chrome extension
+# Tabcast — Chrome extension
 
-Saves the article you are reading to the Article to Podcast backend with one click on the toolbar icon.
+Saves the article you are reading to the Tabcast backend with one click on the toolbar icon.
 
 Built with [WXT](https://wxt.dev), React, and TypeScript, Manifest V3. It never imports from `app/`; it talks to the backend over HTTP only.
 
@@ -22,9 +22,21 @@ Load `.output/chrome-mv3` at `chrome://extensions` with Developer mode on. `npm 
 
 Point it at a running backend (`cd app && wasp start`) and sign up in the web app first — the extension has no signup form of its own.
 
+## Install without building
+
+Grab the zip from the [latest release](https://github.com/vincanger/tabcast/releases/latest), unzip it, and load the folder at `chrome://extensions` with Developer mode on. Chrome reminds you about developer mode extensions on each launch until the Web Store listing is live; that's expected.
+
+## Point it at a server
+
+The popup's **Server settings** take an API server URL and a dashboard URL.
+
+- **Hosted demo.** Open Server settings and click *use the hosted demo*, or enter the URLs by hand. Sign up on the dashboard first.
+  <!-- TODO (AGENT): fill in the demo URLs here once deployed, and in utils/api.ts. -->
+- **Your own deployment.** Enter your server and client URLs. On Fly those are the two apps `wasp deploy fly launch <name>` creates, `https://<name>-server.fly.dev` and `https://<name>-client.fly.dev`.
+
 ## Build for your own deployment
 
-The server and dashboard URLs default to `wasp start`'s localhost ports. To bake in your deployed URLs instead, copy `.env.example` to `.env` and set them:
+To bake your URLs into the build so the popup is pre-filled, copy `.env.example` to `.env` and set them:
 
 ```
 WXT_SERVER_URL=https://my-app-server.fly.dev

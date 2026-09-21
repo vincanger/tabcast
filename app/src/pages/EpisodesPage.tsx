@@ -1,15 +1,20 @@
 import { Link } from "react-router";
-import { getEpisodes, useQuery } from "wasp/client/operations";
+import { getEpisodes, getFeed, useQuery } from "wasp/client/operations";
 import { StatusBadge, formatDuration, pollWhileAnyInFlight } from "../components/episode";
 import { EpisodeCover } from "../components/EpisodeCover";
-import { PodcastFeedCard } from "../components/PodcastFeedCard";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { Skeleton } from "../components/ui/skeleton";
+import { useEnterOnce } from "../lib/enterOnce";
+import { cn } from "../lib/utils";
 
 export function EpisodesPage() {
   const { data: episodes, isLoading, error } = useQuery(getEpisodes, undefined, {
     refetchInterval: pollWhileAnyInFlight,
   });
+  const enter = useEnterOnce("episodes");
+  // Nudge toward the podcast feed until the user has set one up.
+  const { data: feed } = useQuery(getFeed);
+  const showFeedNudge = !!episodes?.length && feed !== undefined && !feed.url;
 
   return (
     <div className="space-y-10">
@@ -37,11 +42,14 @@ export function EpisodesPage() {
             {episodes.map((e, i) => (
               <li
                 key={e.id}
-                style={{ animationDelay: `${i * 45}ms` }}
-                className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:fill-mode-backwards"
+                style={enter ? { animationDelay: `${i * 45}ms` } : undefined}
+                className={cn(
+                  enter &&
+                    "motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:fill-mode-backwards",
+                )}
               >
-                <Link to={`/episodes/${e.id}`} className="group flex items-center gap-4 py-4">
-                  <EpisodeCover sources={e.sourceUrls} className="size-14" />
+                <Link to={`/episodes/${e.id}`} className="group flex items-start gap-4 py-4">
+                  <EpisodeCover sources={e.sourceUrls} className="mt-0.5 size-14" />
                   <div className="min-w-0 flex-1">
                     <span className="line-clamp-2 font-serif text-lg leading-snug group-hover:text-rubric">
                       {e.title}
@@ -64,7 +72,15 @@ export function EpisodesPage() {
           </ul>
         )}
       </section>
-      <PodcastFeedCard />
+
+      {showFeedNudge && (
+        <p className="border-t pt-6 text-center font-serif italic text-muted-foreground">
+          Add your private feed to your favorite podcast app so new episodes arrive automatically.{" "}
+          <Link to="/setup" className="not-italic text-rubric hover:underline">
+            Set up your feed →
+          </Link>
+        </p>
+      )}
     </div>
   );
 }

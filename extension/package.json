@@ -1,6 +1,6 @@
 {
   "name": "article-to-podcast-extension",
-  "description": "Chrome extension for Article to Podcast",
+  "description": "Chrome extension for Tabcast",
   "private": true,
   "version": "0.1.0",
   "type": "module",

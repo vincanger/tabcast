@@ -24,7 +24,7 @@ export function withChapterTags(audio: Buffer, episode: { title: string; parts: 
 
   const tag = NodeID3.create({
     title: episode.title,
-    artist: "Article to Podcast",
+    artist: "Tabcast",
     chapter: chapters,
     tableOfContents: [
       { elementID: "toc", isOrdered: true, elements: chapters.map((c) => c.elementID) },

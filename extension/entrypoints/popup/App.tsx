@@ -1,5 +1,14 @@
 import { useEffect, useState } from "react";
-import { getSettings, getStatus, login, logout, updateSettings, type Settings } from "@/utils/api";
+import {
+  DEMO_DASHBOARD_URL,
+  DEMO_SERVER_URL,
+  getSettings,
+  getStatus,
+  login,
+  logout,
+  updateSettings,
+  type Settings,
+} from "@/utils/api";
 
 type View = { kind: "loading" } | { kind: "login" } | { kind: "status"; username: string | null; unusedCount: number };
 
@@ -153,6 +162,7 @@ function SettingsForm({
 }) {
   const [serverUrl, setServerUrl] = useState(settings.serverUrl);
   const [dashboardUrl, setDashboardUrl] = useState(settings.dashboardUrl);
+  const hasDemo = Boolean(DEMO_SERVER_URL && DEMO_DASHBOARD_URL);
 
   return (
     <form
@@ -161,6 +171,26 @@ function SettingsForm({
         void onSubmit(serverUrl.trim(), dashboardUrl.trim());
       }}
     >
+      <p className="muted small hint">
+        Running your own instance? Enter its API server and dashboard URLs.
+        {hasDemo && (
+          <>
+            {" "}
+            Or{" "}
+            <button
+              type="button"
+              className="link"
+              onClick={() => {
+                setServerUrl(DEMO_SERVER_URL);
+                setDashboardUrl(DEMO_DASHBOARD_URL);
+              }}
+            >
+              use the hosted demo
+            </button>
+            .
+          </>
+        )}
+      </p>
       <label className="small muted">
         API server URL
         <input type="url" value={serverUrl} onChange={(e) => setServerUrl(e.target.value)} required />

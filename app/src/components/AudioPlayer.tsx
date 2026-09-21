@@ -1,6 +1,7 @@
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
 import { Download, Loader2, Pause, Play } from "lucide-react";
 import { Button } from "./ui/button";
+import { IconSwap } from "./IconSwap";
 import { cn } from "../lib/utils";
 import type { Chapter } from "../shared/chapters";
 
@@ -168,13 +169,14 @@ export function AudioPlayer({
         type="button"
         onClick={toggle}
         aria-label={playing ? "Pause" : "Play"}
-        className="flex size-12 shrink-0 items-center justify-center bg-primary text-primary-foreground transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        className="flex size-12 shrink-0 items-center justify-center bg-primary text-primary-foreground transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       >
-        {playing ? (
-          <Pause className="size-5 fill-current" />
-        ) : (
-          <Play className="size-5 translate-x-px fill-current" />
-        )}
+        <IconSwap
+          active={playing}
+          className="size-5"
+          activeIcon={<Pause className="size-5 fill-current" />}
+          inactiveIcon={<Play className="size-5 translate-x-px fill-current" />}
+        />
       </button>
 
       <div className="min-w-0 flex-1">

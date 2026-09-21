@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { getSchedule, updateSchedule, useQuery } from "wasp/client/operations";
-import { Button } from "./ui/button";
+import { InlineSelect } from "./InlineSelect";
 
-// One line under the generate row. Collapsed it is a link or a summary;
-// clicking opens the schedule as a sentence with inline selects, and Save
-// closes it again. Episode length comes from the panel's slider.
+// The schedule lives inside the generate sentence as a trailing clause:
+// "…, and check again every day at 07:30 if at least 3 articles are waiting."
+// Reading, the values are underlined words and the actions beside the button
+// are Edit and Turn off (or "Set a schedule →" when off). Editing swaps each
+// value for an inline select and the actions become Save and Cancel. Nothing
+// moves but the words, so the sentence never jumps between states.
 type Form = {
   everyDays: number;
   localSlot: number; // 0..47, half hours since local midnight
@@ -13,7 +16,10 @@ type Form = {
 
 const DEFAULTS: Form = { everyDays: 1, localSlot: slotFromUtc(7, 0), minArticles: 3 };
 
-export function ScheduleToggle({ minutes, fullRead }: { minutes: number; fullRead: boolean }) {
+const actionClass =
+  "kicker py-1 underline decoration-border underline-offset-4 hover:text-rubric disabled:opacity-50";
+
+export function useScheduleSentence({ minutes, fullRead }: { minutes: number; fullRead: boolean }) {
   const { data: schedule, isLoading } = useQuery(getSchedule);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Form>(DEFAULTS);
@@ -46,7 +52,7 @@ export function ScheduleToggle({ minutes, fullRead }: { minutes: number; fullRea
       });
       return true;
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not save the schedule.");
+      setError("Unable to save the schedule. Check your connection and try again.");
       return false;
     } finally {
       setBusy(false);
@@ -61,8 +67,8 @@ export function ScheduleToggle({ minutes, fullRead }: { minutes: number; fullRea
     if (await persist(form, false)) setEditing(false);
   }
 
-  // Keep the saved length in step with the slider while the schedule is on,
-  // so the summary never says one thing and the job does another.
+  // Keep the saved length in step with the sentence while the schedule is on,
+  // so the clause never says one thing and the job does another.
   const debounce = useRef<number | undefined>(undefined);
   useEffect(() => {
     const unchanged = fullRead
@@ -75,104 +81,78 @@ export function ScheduleToggle({ minutes, fullRead }: { minutes: number; fullRea
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [minutes, fullRead, enabled]);
 
-  if (isLoading) return null;
+  if (isLoading) return { clause: null, actions: null, error: null };
 
-  if (!editing) {
-    return (
-      <p className="kicker mt-4">
-        {enabled ? (
-          <>
-            Checks {schedule!.everyDays === 7 ? "weekly" : "daily"} at {slotLabel(form.localSlot)} ·{" "}
-            {schedule!.mode === "full" ? "in full" : `${schedule!.targetMinutes} min`} ·{" "}
-            {schedule!.minArticles}+ article
-            {schedule!.minArticles === 1 ? "" : "s"}
-            {schedule!.nextRunAt && <> · next {formatLocal(schedule!.nextRunAt)}</>}
-            {" · "}
-            <button type="button" onClick={() => setEditing(true)} className="py-1 hover:text-rubric">
-              Edit
-            </button>
-            {" · "}
-            <button type="button" onClick={turnOff} disabled={busy} className="py-1 hover:text-rubric">
-              Turn off
-            </button>
-          </>
-        ) : (
-          <button type="button" onClick={() => setEditing(true)} className="py-1 hover:text-rubric">
-            Set a schedule →
-          </button>
-        )}
-        {error && <span className="text-destructive"> {error}</span>}
-      </p>
-    );
-  }
+  const plural = form.minArticles === 1 ? "" : "s";
 
-  return (
-    <div className="mt-6 border-t pt-4">
-      <p className="font-serif text-lg leading-relaxed">
-        Check{" "}
-        <InlineSelect label="How often" value={form.everyDays} onChange={(v) => setForm({ ...form, everyDays: v })}>
-          <option value={1}>every day</option>
-          <option value={7}>every week</option>
-        </InlineSelect>{" "}
-        at{" "}
-        <InlineSelect label="Time of day" value={form.localSlot} onChange={(v) => setForm({ ...form, localSlot: v })}>
-          {Array.from({ length: 48 }, (_, slot) => (
-            <option key={slot} value={slot}>
-              {slotLabel(slot)}
-            </option>
-          ))}
-        </InlineSelect>{" "}
-        and {fullRead ? "read them in full" : `generate a ${minutes} minute episode`} if there are at least{" "}
-        <InlineSelect label="Minimum articles" value={form.minArticles} onChange={(v) => setForm({ ...form, minArticles: v })}>
-          {Array.from({ length: 20 }, (_, i) => (
-            <option key={i + 1} value={i + 1}>
-              {i + 1}
-            </option>
-          ))}
-        </InlineSelect>{" "}
-        article{form.minArticles === 1 ? "" : "s"}.
-      </p>
-      <div className="mt-3 flex items-center gap-4">
-        <Button size="sm" onClick={save} disabled={busy} className="kicker text-primary-foreground">
-          {busy ? "Saving…" : "Save"}
-        </Button>
-        <button
-          type="button"
-          onClick={() => setEditing(false)}
-          disabled={busy}
-          className="kicker py-1 hover:text-rubric"
-        >
-          Cancel
-        </button>
-        {error && <span className="text-sm text-destructive">{error}</span>}
-      </div>
-    </div>
+  const clause = editing ? (
+    <>
+      , and check again{" "}
+      <InlineSelect label="How often" value={form.everyDays} onChange={(v) => setForm({ ...form, everyDays: Number(v) })}>
+        <option value={1}>every day</option>
+        <option value={7}>every week</option>
+      </InlineSelect>{" "}
+      at{" "}
+      <InlineSelect label="Time of day" value={form.localSlot} onChange={(v) => setForm({ ...form, localSlot: Number(v) })}>
+        {Array.from({ length: 48 }, (_, slot) => (
+          <option key={slot} value={slot}>
+            {slotLabel(slot)}
+          </option>
+        ))}
+      </InlineSelect>{" "}
+      if at least{" "}
+      <InlineSelect label="Minimum articles" value={form.minArticles} onChange={(v) => setForm({ ...form, minArticles: Number(v) })}>
+        {Array.from({ length: 20 }, (_, i) => (
+          <option key={i + 1} value={i + 1}>
+            {i + 1}
+          </option>
+        ))}
+      </InlineSelect>{" "}
+      article{plural} {form.minArticles === 1 ? "is" : "are"} waiting
+    </>
+  ) : enabled ? (
+    <>
+      , and check again <Word>{schedule!.everyDays === 7 ? "every week" : "every day"}</Word> at{" "}
+      <Word>{slotLabel(form.localSlot)}</Word> if at least{" "}
+      <Word>
+        {schedule!.minArticles} article{schedule!.minArticles === 1 ? "" : "s"}
+      </Word>{" "}
+      {schedule!.minArticles === 1 ? "is" : "are"} waiting
+    </>
+  ) : null;
+
+  const actions = editing ? (
+    <>
+      <button type="button" onClick={save} disabled={busy} className={actionClass}>
+        {busy ? "Saving…" : "Save"}
+      </button>
+      <button type="button" onClick={() => setEditing(false)} disabled={busy} className={actionClass}>
+        Cancel
+      </button>
+    </>
+  ) : enabled ? (
+    <>
+      <button type="button" onClick={() => setEditing(true)} className={actionClass}>
+        Edit
+      </button>
+      <button type="button" onClick={turnOff} disabled={busy} className={actionClass}>
+        Turn off
+      </button>
+      {schedule!.nextRunAt && <span className="kicker">Next {formatLocal(schedule!.nextRunAt)}</span>}
+    </>
+  ) : (
+    <button type="button" onClick={() => setEditing(true)} className={actionClass}>
+      Set a schedule →
+    </button>
   );
+
+  return { clause, actions, error };
 }
 
-// A native select dressed as an underlined word in the sentence. The browser
-// still supplies the dropdown, so it works with keyboard and screen readers.
-function InlineSelect({
-  label,
-  value,
-  onChange,
-  children,
-}: {
-  label: string;
-  value: number;
-  onChange: (value: number) => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <select
-      aria-label={label}
-      value={value}
-      onChange={(e) => onChange(Number(e.target.value))}
-      className="cursor-pointer appearance-none border-0 border-b border-input bg-transparent px-0 py-0 font-serif text-lg text-foreground transition hover:border-rubric hover:text-rubric focus:border-rubric focus:outline-none"
-    >
-      {children}
-    </select>
-  );
+// A saved value shown as prose: underlined in the accent, like the select it
+// becomes when editing, so the word keeps its place and its width.
+function Word({ children }: { children: React.ReactNode }) {
+  return <span className="underline decoration-rubric decoration-1 underline-offset-[6px]">{children}</span>;
 }
 
 // Half hour slots since local midnight <-> UTC hour and minute. Going through

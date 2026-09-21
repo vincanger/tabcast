@@ -39,7 +39,7 @@ export function GenerationSteps({
           Live
         </span>
         <p className="font-serif text-lg">Building your episode</p>
-        <span className="kicker ml-auto tabular-nums">{Math.floor(elapsed / 1000)}s</span>
+        <span className="kicker ms-auto tabular-nums">{Math.floor(elapsed / 1000)}s</span>
       </div>
 
       <ol className="space-y-2 font-serif text-lg">
@@ -56,7 +56,7 @@ export function GenerationSteps({
             >
               <span className="w-5 tabular-nums">{i + 1}.</span>
               <span>{label}</span>
-              {done && <Check className="size-4 self-center text-rubric" strokeWidth={2.5} />}
+              {done && <Check className="size-4 self-center text-rubric" strokeWidth={1.5} />}
             </li>
           );
         })}

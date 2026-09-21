@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import { Link, useParams } from "react-router";
+import { Play } from "lucide-react";
 import { getEpisode, useQuery } from "wasp/client/operations";
 import { StatusBadge, formatDuration, isInFlight, pollWhileInFlight } from "../components/episode";
 import { AudioPlayer, type AudioPlayerHandle } from "../components/AudioPlayer";
@@ -104,8 +105,8 @@ export function EpisodePage() {
         <h2 className="kicker border-b pb-2">Sources</h2>
         <ul className="divide-y">
           {episode.articles.map((a) => (
-            <li key={a.id} className="flex items-center gap-4 py-3">
-              <SourceIcon url={a.url} />
+            <li key={a.id} className="flex items-start gap-4 py-3">
+              <SourceIcon url={a.url} className="mt-0.5" />
               <div className="min-w-0">
                 <a
                   href={a.url}
@@ -124,9 +125,10 @@ export function EpisodePage() {
                   type="button"
                   onClick={() => playerRef.current?.seek(a.startSeconds!)}
                   aria-label={`Play from ${formatDuration(a.startSeconds)}`}
-                  className="kicker ms-auto shrink-0 py-1 tabular-nums hover:text-rubric"
+                  className="kicker ms-auto inline-flex shrink-0 items-center gap-1 py-1 tabular-nums hover:text-rubric"
                 >
-                  ▶ {formatDuration(a.startSeconds)}
+                  <Play className="size-3 fill-current" />
+                  {formatDuration(a.startSeconds)}
                 </button>
               )}
             </li>
