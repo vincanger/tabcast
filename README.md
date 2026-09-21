@@ -7,13 +7,13 @@ Built as a [Wasp](https://wasp.sh) showcase: a small full-stack app that serves 
 ## What's inside
 
 ```
-app/                Wasp 0.25 app: auth, Postgres, operations, HTTP APIs, PgBoss job, S3 upload
+app/                Wasp 0.25 app: auth, Postgres, operations, HTTP APIs, PgBoss jobs, S3 upload
                     Dashboard UI is Tailwind v4 + shadcn
 extension/          WXT (Manifest V3) Chrome extension: Readability parsing, badge feedback, login popup
 docker-compose.yml  Local S3 (MinIO) for development
 ```
 
-**Flow.** Click the extension icon on any article. The content script runs Mozilla Readability on the page and posts the text to the Wasp backend. In the dashboard, pick a target length and click Generate. A background job asks OpenAI for a single narrator script, records it with OpenAI text to speech, uploads the MP3 to S3, and the episode page shows the player, the script, and links to the sources.
+**Flow.** Click the extension icon on any article, or share it from an iPhone to a Shortcut that reads the page with Safari Reader. The content script runs Mozilla Readability on the page and posts the text to the Wasp backend. In the dashboard, pick a target length and click Generate — or push the slider to its last stop to have the articles read aloud in full, capped at 90 minutes since text to speech is priced per character — or turn on a schedule that checks the inbox every day or week at a time you choose and generates only when enough is saved. A background job asks OpenAI for a single narrator script, records it with OpenAI text to speech, uploads the MP3 to S3, and the episode page shows the player, the script, and links to the sources.
 
 ## Run it locally
 
@@ -71,9 +71,10 @@ The extension never imports app code. It uses Wasp's built in auth endpoints and
 | `POST /auth/logout` | Ends the session |
 | `GET /api/ext/status` | Username and number of unused saves, used by the popup |
 | `POST /api/ext/articles` | Saves a parsed article, returns `created` or `duplicate` |
+| `POST /api/save/:token` | Same body from the iOS Shortcut, authenticated by a per user token instead of a session |
 
 ## Deploying
 
-The Wasp app deploys like any other Wasp app (`wasp deploy fly` or Railway). Set the server env vars from `.env.server.example` on the host, replacing the MinIO values with a real S3 compatible bucket: your own credentials, and `S3_ENDPOINT` either unset for AWS or pointed at your provider. Auth is username and password, so there is no email provider to configure.
+The Wasp app deploys like any other Wasp app (`wasp deploy fly` or Railway). Set the server env vars from `.env.server.example` on the host, replacing the MinIO values with a real S3 compatible bucket: your own credentials, and `S3_ENDPOINT` either unset for AWS or pointed at your provider. Auth is username and password, so there is no email provider to configure. Set `SIGNUPS_OPEN=false` once you have created your account if the instance is just for you: the signup page stays, but the server refuses every new account, including ones attempted with curl against `/auth/username/signup`.
 
 For the extension, copy `extension/.env.example` to `extension/.env`, set `WXT_SERVER_URL` and `WXT_DASHBOARD_URL` to your deployed URLs, and rebuild — the build then points at your instance out of the box. You can also leave the build alone and override both URLs under "Server settings" in the popup.

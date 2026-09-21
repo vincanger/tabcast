@@ -27,9 +27,13 @@
   --accent-foreground: oklch(0.2 0.02 60);
   /* Oxblood. Red ink for links, the live step, and the played waveform. */
   --rubric: oklch(0.48 0.17 25);
-  --destructive: oklch(0.48 0.17 25);
+  /* Brick, kept more than 15 degrees of hue away from the rubric so a failed
+     badge and a delete hover never read as a link. */
+  --destructive: oklch(0.48 0.13 45);
   --border: oklch(0.2 0.02 60 / 18%);
-  --input: oklch(0.2 0.02 60 / 28%);
+  /* Solid, not tinted: a control edge has to reach 3:1 on both the sheet and
+     the secondary panel. Measured 3.58:1 and 3.27:1. */
+  --input: oklch(0.6 0.02 60);
   --ring: oklch(0.48 0.17 25);
   --chart-1: oklch(0.2 0.02 60);
   --chart-2: oklch(0.48 0.17 25);
@@ -96,7 +100,7 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-ring;
   }
   body {
     @apply bg-background text-foreground;
@@ -115,7 +119,7 @@
 /* Small caps label used for section heads, datelines and metadata. */
 @utility kicker {
   font-family: var(--font-sans);
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;

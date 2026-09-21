@@ -3,6 +3,13 @@ import { defineEnvValidationSchema } from "wasp/env";
 
 export const serverEnvValidationSchema = defineEnvValidationSchema(
   z.object({
+    // Set to false on a private instance. The signup page stays, but the
+    // server refuses every signup, including ones made with curl.
+    SIGNUPS_OPEN: z
+      .enum(["true", "false"])
+      .default("true")
+      .transform((v) => v === "true"),
+
     OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required."),
     OPENAI_SCRIPT_MODEL: z.string().default("gpt-4o-mini"),
     OPENAI_TTS_MODEL: z.string().default("tts-1"),

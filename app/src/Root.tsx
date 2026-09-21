@@ -37,7 +37,7 @@ export function Root() {
                 <span className="hidden normal-case tracking-normal sm:inline">
                   {user.identities.username?.id}
                 </span>
-                <button type="button" onClick={() => logout()} className="kicker hover:text-foreground">
+                <button type="button" onClick={() => logout()} className="kicker py-1 hover:text-foreground">
                   Log out
                 </button>
               </nav>
@@ -68,7 +68,7 @@ function NavLink({
     <Link
       to={to}
       className={cn(
-        "kicker border-b-2 pb-px hover:text-foreground",
+        "kicker border-b-2 py-1 hover:text-foreground",
         active ? "border-rubric text-foreground" : "border-transparent",
       )}
     >

@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto";
 import { HttpError, config } from "wasp/server";
 import type { FeedApi, FeedAudioApi, FeedChaptersApi } from "wasp/server/api";
 import type { Article, Episode } from "wasp/entities";
@@ -8,10 +7,6 @@ import { chaptersFor } from "./shared/chapters";
 // Podcast apps cannot log in, so the feed and its audio are guarded by a secret
 // token in the URL instead of a session. Anyone holding the URL can listen;
 // rotating the token is how a user revokes it.
-
-export function newFeedToken(): string {
-  return randomBytes(24).toString("base64url");
-}
 
 export function feedUrl(token: string): string {
   return `${config.serverUrl}/api/feed/${token}`;

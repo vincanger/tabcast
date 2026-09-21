@@ -15,8 +15,33 @@ model User {
   // Secret that stands in for a session on the podcast feed, which is fetched
   // by podcast apps that cannot log in. Rotating it revokes every subscriber.
   feedToken String?   @unique
+  // Secret that lets the iOS Shortcut save articles without a session.
+  // Separate from feedToken so a leaked feed URL cannot write.
+  saveToken String?   @unique
   articles  Article[]
   episodes  Episode[]
+  schedule  GenerationSchedule?
+}
+
+// Automatic generation. A half hourly job runs every enabled schedule whose
+// nextRunAt has passed, then advances it. That column is the whole state.
+model GenerationSchedule {
+  userId        Int       @id
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enabled       Boolean   @default(false)
+  // 1 = daily, 7 = weekly. Slots are on the hour or half hour, in UTC.
+  everyDays     Int       @default(1)
+  hourUtc       Int       @default(7)
+  minuteUtc     Int       @default(0)
+  // Skip the slot unless the inbox has at least this many articles.
+  minArticles   Int       @default(3)
+  // Copied from the length slider when the schedule is saved.
+  mode          String    @default("summary")
+  targetMinutes Int       @default(5)
+  nextRunAt     DateTime?
+  lastCheckedAt DateTime?
+
+  @@index([enabled, nextRunAt])
 }
 
 model Article {
@@ -47,6 +72,9 @@ model Episode {
   userId          Int
   // pending | generating | ready | failed
   status          String    @default("pending")
+  // summary | full. A full episode reads every article verbatim, and its
+  // targetMinutes is the estimate made when it was started.
+  mode            String    @default("summary")
   // While generating: reading | writing | recording. Null otherwise.
   phase           String?
   targetMinutes   Int

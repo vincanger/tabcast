@@ -1,5 +1,5 @@
 import type { GenerateEpisodeJob } from "wasp/server/jobs";
-import { estimateDurationSeconds, narrate, scriptText, writeScript } from "../lib/openai";
+import { estimateDurationSeconds, narrate, scriptText, writeFullScript, writeScript } from "../lib/openai";
 import { mp3DurationSeconds } from "../lib/mp3";
 import { withChapterTags } from "../lib/id3";
 import { episodeAudioKey, uploadEpisodeAudio } from "../lib/s3";
@@ -30,9 +30,12 @@ export const generateEpisodeJob: GenerateEpisodeJob<Input, void> = async ({ epis
   try {
     if (episode.articles.length === 0) throw new Error("Episode has no articles.");
 
-    console.log(`[generateEpisode] Writing script for episode ${episodeId} (${episode.articles.length} articles, ${episode.targetMinutes} min).`);
+    console.log(`[generateEpisode] Writing script for episode ${episodeId} (${episode.articles.length} articles, ${episode.mode === "full" ? "in full" : `${episode.targetMinutes} min`}).`);
     await Episode.update({ where: { id: episodeId }, data: { phase: "writing" } });
-    const script = await writeScript(episode.articles, episode.targetMinutes);
+    const script =
+      episode.mode === "full"
+        ? await writeFullScript(episode.articles)
+        : await writeScript(episode.articles, episode.targetMinutes);
     const text = scriptText(script);
 
     console.log(`[generateEpisode] Narrating episode ${episodeId} (${text.length} chars).`);

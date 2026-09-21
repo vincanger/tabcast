@@ -35,7 +35,7 @@ export function GenerationSteps({
     <div className="border bg-secondary p-5">
       <div className="mb-4 flex items-center gap-3 border-b pb-3">
         <span className="kicker flex items-center gap-2 text-rubric">
-          <span className="size-2 animate-pulse bg-rubric" />
+          <span className="size-2 motion-safe:animate-pulse bg-rubric" />
           Live
         </span>
         <p className="font-serif text-lg">Building your episode</p>
@@ -51,7 +51,7 @@ export function GenerationSteps({
               key={label}
               className={cn(
                 "flex items-baseline gap-3",
-                active ? "text-rubric" : done ? "text-foreground" : "text-muted-foreground/70",
+                active ? "text-rubric" : done ? "text-foreground" : "text-muted-foreground",
               )}
             >
               <span className="w-5 tabular-nums">{i + 1}.</span>

@@ -24,7 +24,9 @@ export function EpisodePage() {
   if (!Number.isInteger(episodeId)) {
     return (
       <Alert variant="destructive">
-        <AlertDescription>Invalid episode id.</AlertDescription>
+        <AlertDescription>
+          This episode does not exist. <Link to="/episodes">Go to all episodes</Link>.
+        </AlertDescription>
       </Alert>
     );
   }
@@ -32,7 +34,10 @@ export function EpisodePage() {
   if (error) {
     return (
       <Alert variant="destructive">
-        <AlertDescription>{error.message}</AlertDescription>
+        <AlertDescription>
+          Unable to load this episode. Reload the page, or{" "}
+          <Link to="/episodes">go to all episodes</Link>.
+        </AlertDescription>
       </Alert>
     );
   }
@@ -45,7 +50,7 @@ export function EpisodePage() {
   return (
     <article className="space-y-8">
       <p className="kicker">
-        <Link to="/episodes" className="hover:text-foreground">
+        <Link to="/episodes" className="inline-block py-1 hover:text-foreground">
           ← All episodes
         </Link>
       </p>
@@ -53,7 +58,7 @@ export function EpisodePage() {
       <header className="flex flex-wrap items-center gap-6 border-b pb-6">
         <EpisodeCover sources={sources} className="size-28" />
         <div className="min-w-0 flex-1">
-          <h2 className="font-serif text-4xl leading-tight font-medium text-balance">{episode.title}</h2>
+          <h1 className="font-serif text-4xl leading-tight font-medium text-balance">{episode.title}</h1>
           <p className="kicker mt-3 flex flex-wrap items-center gap-2">
             <span>
               {new Date(episode.createdAt).toLocaleDateString(undefined, {
@@ -61,7 +66,7 @@ export function EpisodePage() {
                 day: "numeric",
                 year: "numeric",
               })}{" "}
-              · target {episode.targetMinutes} min
+              · {episode.mode === "full" ? "read in full" : `target ${episode.targetMinutes} min`}
               {episode.durationSeconds ? ` · about ${formatDuration(episode.durationSeconds)}` : ""}
             </span>
             <StatusBadge status={episode.status} />
@@ -78,11 +83,14 @@ export function EpisodePage() {
       )}
       {episode.status === "failed" && (
         <Alert variant="destructive">
-          <AlertDescription>Generation failed: {episode.error ?? "unknown error"}.</AlertDescription>
+          <AlertDescription>
+            Generation failed: {episode.error ?? "unknown error"}. Your articles are back in the{" "}
+            <Link to="/">inbox</Link>, so you can generate the episode again.
+          </AlertDescription>
         </Alert>
       )}
       {episode.status === "ready" && episode.audioUrl && (
-        <div className="animate-in fade-in slide-in-from-bottom-2">
+        <div className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2">
           <AudioPlayer
             ref={playerRef}
             src={episode.audioUrl}
@@ -93,7 +101,7 @@ export function EpisodePage() {
       )}
 
       <section>
-        <h3 className="kicker border-b pb-2">Sources</h3>
+        <h2 className="kicker border-b pb-2">Sources</h2>
         <ul className="divide-y">
           {episode.articles.map((a) => (
             <li key={a.id} className="flex items-center gap-4 py-3">
@@ -103,7 +111,7 @@ export function EpisodePage() {
                   href={a.url}
                   target="_blank"
                   rel="noreferrer noopener"
-                  className="block truncate font-serif text-lg leading-snug hover:text-rubric"
+                  className="line-clamp-2 font-serif text-lg leading-snug hover:text-rubric"
                 >
                   {a.title}
                 </a>
@@ -116,7 +124,7 @@ export function EpisodePage() {
                   type="button"
                   onClick={() => playerRef.current?.seek(a.startSeconds!)}
                   aria-label={`Play from ${formatDuration(a.startSeconds)}`}
-                  className="kicker ml-auto shrink-0 tabular-nums hover:text-rubric"
+                  className="kicker ms-auto shrink-0 py-1 tabular-nums hover:text-rubric"
                 >
                   ▶ {formatDuration(a.startSeconds)}
                 </button>
@@ -128,7 +136,7 @@ export function EpisodePage() {
 
       {episode.script && (
         <section>
-          <h3 className="kicker border-b pb-2">Transcript</h3>
+          <h2 className="kicker border-b pb-2">Transcript</h2>
           <div className="mt-4 space-y-4 font-serif text-[17px] leading-relaxed">
             {episode.script.split(/\n\s*\n/).map((p, i) => (
               <p key={i}>{p}</p>

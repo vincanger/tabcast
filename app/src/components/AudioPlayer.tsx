@@ -75,6 +75,19 @@ export function AudioPlayer({
 }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const peaks = useWaveform(src);
+  const trackRef = useRef<HTMLDivElement>(null);
+  // How many bars fit: each needs at least 2px plus the 2px gap, so a 320px
+  // phone gets a few dozen and a desktop gets all 72.
+  const [bars, setBars] = useState(BARS);
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => {
+      setBars(Math.max(16, Math.min(BARS, Math.floor(entry.contentRect.width / 4))));
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const [playing, setPlaying] = useState(false);
   const [current, setCurrent] = useState(0);
@@ -167,11 +180,13 @@ export function AudioPlayer({
       <div className="min-w-0 flex-1">
         <div className="relative">
         <div
+          ref={trackRef}
           role="slider"
           aria-label="Seek"
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={Math.round(progress * 100)}
+          aria-valuetext={`${formatTime(current)} of ${formatTime(duration)}`}
           tabIndex={0}
           onClick={(e) => {
             const rect = e.currentTarget.getBoundingClientRect();
@@ -180,12 +195,16 @@ export function AudioPlayer({
           onKeyDown={(e) => {
             if (e.key === "ArrowRight") seekTo(Math.min(1, progress + 0.05));
             if (e.key === "ArrowLeft") seekTo(Math.max(0, progress - 0.05));
+            if (e.key === "Home") seekTo(0);
+            if (e.key === "End") seekTo(1);
           }}
-          className="flex h-12 cursor-pointer items-center gap-[2px] focus-visible:outline-none"
+          className="flex h-12 cursor-pointer items-center gap-[2px]"
         >
-          {Array.from({ length: BARS }, (_, i) => {
-            const height = peaks ? 0.15 + peaks[i] * 0.85 : 0.25;
-            const played = i / BARS < progress;
+          {Array.from({ length: bars }, (_, i) => {
+            // Sample the fixed peak buckets down to however many bars fit.
+            const peak = peaks ? peaks[Math.floor((i * BARS) / bars)] : null;
+            const height = peak !== null ? 0.15 + peak * 0.85 : 0.25;
+            const played = i / bars < progress;
             return (
               <span
                 key={i}
@@ -193,7 +212,7 @@ export function AudioPlayer({
                 className={cn(
                   "flex-1 transition-colors",
                   played ? "bg-rubric" : "bg-foreground/25",
-                  !peaks && "animate-pulse",
+                  !peaks && "motion-safe:animate-pulse",
                 )}
               />
             );

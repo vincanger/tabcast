@@ -12,7 +12,7 @@ const STATUS: Record<string, { label: string; className: string }> = {
 export function StatusBadge({ status }: { status: string }) {
   const { label, className } = STATUS[status] ?? { label: status, className: "" };
   return (
-    <Badge variant="outline" className={cn("kicker h-5 px-1.5 text-[10px]", className)}>
+    <Badge variant="outline" className={cn("kicker h-5 px-1.5", className)}>
       {label}
     </Badge>
   );

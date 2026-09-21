@@ -1,7 +1,7 @@
 import cors from "cors";
 import * as z from "zod";
-import { HttpError, type MiddlewareConfigFn } from "wasp/server";
-import type { ExtStatusApi, SaveArticleApi } from "wasp/server/api";
+import { HttpError, config, type MiddlewareConfigFn, type PrismaClient } from "wasp/server";
+import type { ExtStatusApi, SaveArticleApi, ShortcutSaveApi } from "wasp/server/api";
 
 // The extension calls these endpoints from its service worker. Chrome skips
 // CORS for hosts listed in the extension's host_permissions, but we allow
@@ -39,27 +39,60 @@ export const saveArticleApi: SaveArticleApi<never, SaveArticleResponse, SaveArti
   context,
 ) => {
   if (!context.user) throw new HttpError(401);
+  const saved = await saveArticle(context.user.id, req.body, context.entities.Article);
+  res.status(saved.result === "created" ? 201 : 200).json(saved);
+};
 
-  const parsed = saveArticleBody.safeParse(req.body);
+// The iOS Shortcut cannot hold a session, so the user's save token in the URL
+// identifies them instead. Same body as the extension; Safari Reader supplies
+// the same fields Readability does. Replies in plain text so the Shortcut can
+// show it in a notification as is.
+export function saveUrl(token: string): string {
+  return `${config.serverUrl}/api/save/${token}`;
+}
+
+export const shortcutSaveApi: ShortcutSaveApi<{ token: string }, string, SaveArticleBody> = async (
+  req,
+  res,
+  context,
+) => {
+  const user = await context.entities.User.findUnique({
+    where: { saveToken: req.params.token },
+    select: { id: true },
+  });
+  if (!user) throw new HttpError(404);
+  const saved = await saveArticle(user.id, req.body, context.entities.Article);
+  res
+    .status(saved.result === "created" ? 201 : 200)
+    .type("text/plain")
+    .send(saved.result === "created" ? `Saved: ${saved.title}` : `Already saved: ${saved.title}`);
+};
+
+async function saveArticle(
+  userId: number,
+  rawBody: unknown,
+  Article: PrismaClient["article"],
+): Promise<SaveArticleResponse & { title: string }> {
+  const parsed = saveArticleBody.safeParse(rawBody);
   if (!parsed.success) {
-    throw new HttpError(400, parsed.error.issues[0]?.message ?? "Invalid article.");
+    // Name the field, since the Shortcut user only sees this text.
+    const issue = parsed.error.issues[0];
+    const where = issue?.path.length ? `${issue.path.join(".")}: ` : "";
+    throw new HttpError(400, issue ? `${where}${issue.message}` : "Invalid article.");
   }
   const body = parsed.data;
   const url = normalizeUrl(body.url);
   const textContent = body.textContent.slice(0, MAX_TEXT_CHARS);
 
-  const existing = await context.entities.Article.findUnique({
-    where: { userId_url: { userId: context.user.id, url } },
-    select: { id: true },
+  const existing = await Article.findUnique({
+    where: { userId_url: { userId, url } },
+    select: { id: true, title: true },
   });
-  if (existing) {
-    res.json({ result: "duplicate", articleId: existing.id });
-    return;
-  }
+  if (existing) return { result: "duplicate", articleId: existing.id, title: existing.title };
 
-  const article = await context.entities.Article.create({
+  const article = await Article.create({
     data: {
-      userId: context.user.id,
+      userId,
       url,
       title: body.title,
       siteName: body.siteName ?? null,
@@ -70,8 +103,8 @@ export const saveArticleApi: SaveArticleApi<never, SaveArticleResponse, SaveArti
     },
     select: { id: true },
   });
-  res.status(201).json({ result: "created", articleId: article.id });
-};
+  return { result: "created", articleId: article.id, title: body.title };
+}
 
 export type ExtStatusResponse = { username: string | null; unusedCount: number };
 

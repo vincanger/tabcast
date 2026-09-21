@@ -8,9 +8,17 @@ import {
   getInbox,
   useQuery,
 } from "wasp/client/operations";
-import { DEFAULT_MINUTES, MAX_MINUTES, MIN_MINUTES } from "../shared/constants";
+import {
+  DEFAULT_MINUTES,
+  FULL_READ,
+  FULL_READ_MAX_MINUTES,
+  MIN_MINUTES,
+  estimateMinutes,
+} from "../shared/constants";
 import { isInFlight, pollWhileAnyInFlight } from "../components/episode";
 import { GenerationSteps } from "../components/GenerationSteps";
+import { SaveShortcutCard } from "../components/SaveShortcutCard";
+import { ScheduleToggle } from "../components/ScheduleToggle";
 import { SourceIcon } from "../components/SourceIcon";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { Button } from "../components/ui/button";
@@ -31,15 +39,21 @@ export function InboxPage() {
   const inFlight = episodes.data?.find((e) => isInFlight(e.status));
   const latestFailed = episodes.data?.[0]?.status === "failed" ? episodes.data[0] : null;
   const articles = inbox.data ?? [];
-  const canGenerate = articles.length > 0 && !inFlight && !busy;
+
+  // The slider's last stop reads everything verbatim, so the length is the
+  // inbox's, not the user's. Show the estimate where the target would be.
+  const fullRead = minutes === FULL_READ;
+  const fullMinutes = estimateMinutes(articles.reduce((n, a) => n + a.wordCount, 0));
+  const overCap = fullRead && fullMinutes > FULL_READ_MAX_MINUTES;
+  const canGenerate = articles.length > 0 && !inFlight && !busy && !overCap;
 
   async function onGenerate() {
     setError(null);
     setBusy(true);
     try {
-      await generateEpisode({ targetMinutes: minutes });
+      await generateEpisode(fullRead ? { mode: "full" } : { mode: "summary", targetMinutes: minutes });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong.");
+      setError("Unable to start the episode. Check your connection and try again.");
     } finally {
       setBusy(false);
     }
@@ -50,21 +64,21 @@ export function InboxPage() {
     try {
       await deleteArticle({ id });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not delete the article.");
+      setError("Unable to delete the article. Reload the page and try again.");
     }
   }
 
   return (
     <div className="space-y-10">
       {inFlight ? (
-        <div className="animate-in fade-in">
+        <div className="motion-safe:animate-in motion-safe:fade-in">
           <GenerationSteps
             phase={inFlight.phase}
             startedAt={inFlight.createdAt}
             articleCount={inFlight.articleCount}
           />
           <p className="kicker mt-3 text-center">
-            <Link to={`/episodes/${inFlight.id}`} className="hover:text-foreground">
+            <Link to={`/episodes/`} className="inline-block py-1 hover:text-foreground">
               Open the episode page →
             </Link>
           </p>
@@ -72,29 +86,47 @@ export function InboxPage() {
       ) : (
         <div className="border bg-secondary p-6">
           <div className="flex flex-wrap items-end gap-x-8 gap-y-6">
-            <div>
-              <p className="kicker">Target length</p>
+            {/* Fixed width so the label and number can change without moving the row. */}
+            <div className="w-64 shrink-0">
+              <p className="kicker whitespace-nowrap">
+                {fullRead ? "Read in full · estimated" : "Target length"}
+              </p>
               <p className="flex items-baseline gap-1.5 font-serif">
-                <span className="text-6xl leading-none tabular-nums">{minutes}</span>
+                <span className={`text-6xl leading-none tabular-nums ${overCap ? "text-rubric" : ""}`}>
+                  {fullRead ? fullMinutes : minutes}
+                </span>
                 <span className="text-xl text-muted-foreground">min</span>
               </p>
             </div>
-            <div className="min-w-48 flex-1 pb-3">
+            <div className="relative min-w-48 flex-1 pb-3">
               <Slider
-                aria-label="Target length in minutes"
+                aria-label="Target length in minutes, or read in full at the end"
                 min={MIN_MINUTES}
-                max={MAX_MINUTES}
+                max={FULL_READ}
                 step={1}
                 value={[minutes]}
                 onValueChange={([value]) => setMinutes(value)}
               />
+              <span className="kicker absolute top-full right-0 mt-1">Full</span>
             </div>
-            <Button size="lg" className="kicker text-primary-foreground" disabled={!canGenerate} onClick={onGenerate}>
+            <Button
+              size="lg"
+              className="kicker h-auto min-h-10 w-full py-2 text-center whitespace-normal text-primary-foreground sm:w-auto"
+              disabled={!canGenerate} onClick={onGenerate}>
               {busy
                 ? "Starting…"
-                : `Generate from ${articles.length} article${articles.length === 1 ? "" : "s"}`}
+                : fullRead
+                  ? `Read ${articles.length} article${articles.length === 1 ? "" : "s"} in full`
+                  : `Generate from ${articles.length} article${articles.length === 1 ? "" : "s"}`}
             </Button>
           </div>
+          {overCap && (
+            <p className="mt-4 text-sm text-rubric">
+              A full read of everything here would run about {fullMinutes} minutes; the limit is{" "}
+              {FULL_READ_MAX_MINUTES}. Remove some articles or pick a length.
+            </p>
+          )}
+          <ScheduleToggle minutes={minutes} fullRead={fullRead} />
         </div>
       )}
 
@@ -113,18 +145,19 @@ export function InboxPage() {
       )}
 
       <section>
-        <h2 className="kicker border-b pb-2">Inbox</h2>
+        <h1 className="kicker border-b pb-2">Inbox</h1>
         {inbox.isLoading && <Skeleton className="mt-4 h-40 w-full" />}
         {inbox.error && (
           <Alert variant="destructive" className="mt-4">
-            <AlertDescription>{inbox.error.message}</AlertDescription>
+            <AlertDescription>Unable to load the inbox. Reload the page to try again.</AlertDescription>
           </Alert>
         )}
         {!inbox.isLoading && articles.length === 0 && (
           <div className="mt-4 border px-6 py-12 text-center">
             <p className="font-serif text-xl">Nothing saved yet</p>
             <p className="mt-1 font-serif italic text-muted-foreground">
-              Click the extension icon on any article to save it here.
+              Click the extension icon on any article, or share it from your iPhone, to save it
+              here.
             </p>
           </div>
         )}
@@ -134,7 +167,7 @@ export function InboxPage() {
               <li
                 key={a.id}
                 style={{ animationDelay: `${i * 45}ms` }}
-                className="group flex animate-in items-center gap-4 py-4 fade-in slide-in-from-bottom-2 fill-mode-backwards"
+                className="group flex items-center gap-4 py-4 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:fill-mode-backwards"
               >
                 <SourceIcon url={a.url} />
                 <div className="min-w-0 flex-1">
@@ -142,7 +175,7 @@ export function InboxPage() {
                     href={a.url}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className="block truncate font-serif text-lg leading-snug hover:text-rubric"
+                    className="line-clamp-2 font-serif text-lg leading-snug hover:text-rubric"
                   >
                     {a.title}
                   </a>
@@ -158,7 +191,7 @@ export function InboxPage() {
                   variant="ghost"
                   size="icon"
                   aria-label={`Delete ${a.title}`}
-                  className="shrink-0 text-muted-foreground opacity-0 transition group-hover:opacity-100 hover:text-destructive focus-visible:opacity-100"
+                  className="shrink-0 text-muted-foreground hover:text-destructive"
                   onClick={() => onDelete(a.id)}
                   disabled={!!inFlight}
                 >
@@ -169,6 +202,8 @@ export function InboxPage() {
           </ul>
         )}
       </section>
+
+      <SaveShortcutCard />
     </div>
   );
 }

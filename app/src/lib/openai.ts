@@ -1,10 +1,8 @@
 import OpenAI from "openai";
 import { env } from "wasp/server";
+import { WORDS_PER_MINUTE } from "../shared/constants";
 
 const client = new OpenAI({ apiKey: env.OPENAI_API_KEY });
-
-// Narration pace used to size the script and estimate duration.
-export const WORDS_PER_MINUTE = 150;
 
 // Roughly 2,000 words per article keeps 15 articles inside a small context window.
 const MAX_CHARS_PER_ARTICLE = 12_000;
@@ -115,10 +113,23 @@ export async function writeScript(
   return { ...frame, segments };
 }
 
+// Every article verbatim, with a spoken byline in front of each. The only
+// model call is the frame; the cost is all text to speech.
+export async function writeFullScript(sources: ScriptSource[]): Promise<GeneratedScript> {
+  const frame = await writeFrame(sources, "full");
+  const segments = sources.map((s) => {
+    const who = [s.byline ? `by ${s.byline}` : null, s.siteName ? `from ${s.siteName}` : null]
+      .filter(Boolean)
+      .join(", ");
+    return `${s.title}${who ? `, ${who}` : ""}.\n\n${s.textContent.trim()}`;
+  });
+  return { ...frame, segments };
+}
+
 // Title, intro and sign off, from the article list alone.
 async function writeFrame(
   sources: ScriptSource[],
-  targetMinutes: number,
+  length: number | "full",
 ): Promise<{ title: string; intro: string; outro: string }> {
   const list = sources
     .map((s, i) => {
@@ -127,8 +138,12 @@ async function writeFrame(
     })
     .join("\n");
 
+  const what =
+    length === "full"
+      ? "reads articles the listener saved aloud in full"
+      : "summarizes articles the listener saved";
   const instructions = [
-    "You write the opening and closing of a short, single narrator podcast that summarizes articles the listener saved. The article segments themselves are written separately.",
+    `You write the opening and closing of a single narrator podcast that ${what}. The article segments themselves come separately.`,
     "The intro is one or two sentences that say how many articles are covered and preview them in a phrase or two. The sign off is one sentence.",
     "Give the episode a title of at most eight words.",
     ...VOICE,
@@ -137,7 +152,7 @@ async function writeFrame(
   const response = await client.responses.create({
     model: env.OPENAI_SCRIPT_MODEL,
     instructions,
-    input: `Articles in this ${targetMinutes} minute episode:\n${list}`,
+    input: `Articles in this ${length === "full" ? "episode, read in full" : `${length} minute episode`}:\n${list}`,
     text: { format: FRAME_FORMAT },
   });
   return parseFrame(response.output_text);

@@ -12,6 +12,14 @@ export function PodcastFeedCard() {
 
   // Wasp refetches getFeed on its own after the action, since both touch User.
   async function rotate() {
+    if (
+      feed?.url &&
+      !window.confirm(
+        "Regenerate the feed link? Every subscriber, including your own devices, will be disconnected.",
+      )
+    ) {
+      return;
+    }
     setError(null);
     setBusy(true);
     try {
