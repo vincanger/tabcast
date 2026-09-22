@@ -52,7 +52,7 @@ export default app({
   // verified in Resend. See EMAILER_PLAN.md.
   emailSender: {
     provider: 'Resend',
-    defaultFrom: { name: 'Tabcast', email: 'info@tabcast.xyz' },
+    defaultFrom: { name: 'Tabcast', email: 'info@mail.tabcast.xyz' },
   },
   auth: {
     userEntity: 'User',
@@ -67,7 +67,7 @@ export default app({
       // extension/utils/api.ts.
       // usernameAndPassword: {},
       email: {
-        fromField: { name: 'Tabcast', email: 'info@tabcast.xyz' },
+        fromField: { name: 'Tabcast', email: 'info@mail.tabcast.xyz' },
         emailVerification: {
           clientRoute: 'EmailVerificationRoute',
           getEmailContentFn: verificationEmail,
