@@ -65,7 +65,6 @@ export default app({
       // password reset in that mode; fix one with `wasp db studio`. The
       // extension then logs in against /auth/username/login, see
       // extension/utils/api.ts.
-      // usernameAndPassword: {},
       email: {
         fromField: { name: 'Tabcast', email: 'info@mail.tabcast.xyz' },
         emailVerification: {
@@ -77,6 +76,7 @@ export default app({
           getEmailContentFn: passwordResetEmail,
         },
       },
+      // usernameAndPassword: {},
     },
     onBeforeSignup,
     onAuthFailedRedirectTo: '/login',
