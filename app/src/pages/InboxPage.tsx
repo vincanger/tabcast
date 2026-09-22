@@ -36,7 +36,8 @@ export function InboxPage() {
     refetchInterval: pollWhileAnyInFlight,
   });
   const enter = useEnterOnce("inbox");
-  // Null limit means this instance has no cap; the hosted demo has one.
+  // Null limit means this instance has no cap; the hosted demo has one. The
+  // running count lives in the header; here it only gates the button.
   const { data: quota } = useQuery(getEpisodeLimit);
   const capped = !!quota?.limit && quota.used >= quota.limit;
 
@@ -170,19 +171,6 @@ export function InboxPage() {
             <p className="mt-4 text-sm text-destructive">
               A full reading of everything here would run about {fullMinutes} minutes; the limit is{" "}
               {FULL_READ_MAX_MINUTES}. Remove some articles or switch to a summary.
-            </p>
-          )}
-          {quota?.limit && (
-            <p className="kicker mt-4">
-              {quota.used} of {quota.limit} demo episode{quota.limit === 1 ? "" : "s"} used ·{" "}
-              <a
-                href={DEPLOY_URL}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="underline decoration-border underline-offset-4 hover:text-foreground"
-              >
-                Run your own for unlimited →
-              </a>
             </p>
           )}
           {tooThin && (

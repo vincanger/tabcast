@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router";
 import { logout, useAuth } from "wasp/client/auth";
+import { getEpisodeLimit, useQuery } from "wasp/client/operations";
 import { cn } from "./lib/utils";
 import { PoweredBy } from "./components/PoweredBy";
 import "./Main.css";
@@ -13,6 +14,11 @@ import "./Main.css";
 export function Root() {
   const { data: user } = useAuth();
   const { pathname } = useLocation();
+  // On the hosted demo, the dateline row also carries the episode count. It
+  // stays quiet until the first episode so a new account is not greeted with
+  // a limit; the cap itself is handled on the inbox.
+  const { data: quota } = useQuery(getEpisodeLimit, undefined, { enabled: !!user });
+  const demoCount = quota?.limit && quota.used > 0 ? `Demo · ${quota.used} of ${quota.limit} episodes` : null;
   // Set after mount so the prerendered HTML and the browser agree.
   const [today, setToday] = useState("");
   useEffect(() => {
@@ -31,7 +37,10 @@ export function Root() {
       <header className="border-b px-6 sm:px-10">
         <div className="mx-auto w-full max-w-[1200px]">
           <div className="kicker flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b pt-5 pb-3">
-            <span>{today}</span>
+            <span className="flex flex-wrap gap-x-6 gap-y-1">
+              <span>{today}</span>
+              {demoCount && <span className="text-rubric">{demoCount}</span>}
+            </span>
             {user && (
               <nav className="flex items-center gap-5">
                 <NavLink to="/" active={pathname === "/"}>
