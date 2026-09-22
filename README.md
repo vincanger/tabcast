@@ -29,9 +29,8 @@ Chrome reminds you about developer mode extensions on each launch until the Web 
 
 ### Point it at a server
 
-The popup's **Server settings** take an API server URL and a dashboard URL. Two options:
+Out of the box the extension talks to the hosted demo. Sign up at [https://tabcast.xyz](https://tabcast.xyz) and log in from the popup. The popup's **Server settings** take an API server URL and a dashboard URL if you want something else:
 
-- **Use the hosted demo.** Sign up at [https://tabcast.xyz](https://tabcast.xyz), then in Server settings click *use the hosted demo* and log in. By hand, the API server is `https://tabcast-server.fly.dev` and the dashboard is `https://tabcast.xyz`.
 - **Use your own deployment.** Enter the URLs of your deployed server and client. On Fly those are the two apps `wasp deploy fly launch <name>` creates: `https://<name>-server.fly.dev` and `https://<name>-client.fly.dev`. To ship a build with them pre-filled, see [Deploying](#deploying).
 
 ## Run it locally
@@ -106,4 +105,4 @@ The Wasp app deploys like any other Wasp app (`wasp deploy fly` or Railway). Set
 
 If your instance is just for you, an email provider is more setup than it is worth. In `main.wasp.ts`, comment out the `email` method and the `emailSender` block, uncomment `usernameAndPassword`, drop the three email routes and their imports, delete `app/src/auth/email/` (Wasp only generates the email auth functions while that method is on, so those files stop compiling), and route the two pages from `app/src/auth/username/pages.tsx` in place of the email ones. The comment on the auth block walks through it, and `wasp compile` tells you if anything was missed. In the extension, switch the login call in `utils/api.ts` to `/auth/username/login` with a `{ username, password }` body. There is no password reset in that mode; change one with `wasp db studio`.
 
-For the extension, copy `extension/.env.example` to `extension/.env`, set `WXT_SERVER_URL` and `WXT_DASHBOARD_URL` to your deployed URLs, and rebuild — the build then points at your instance out of the box. You can also leave the build alone and override both URLs under "Server settings" in the popup.
+For the extension, copy `extension/.env.example` to `extension/.env`, set `WXT_SERVER_URL` and `WXT_DASHBOARD_URL` to your deployed URLs, and rebuild — the build then points at your instance instead of the demo. You can also leave the build alone and override both URLs under "Server settings" in the popup.

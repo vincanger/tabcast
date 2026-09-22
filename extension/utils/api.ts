@@ -1,15 +1,15 @@
 import type { ExtStatusResponse, ParsedArticle, SaveArticleResponse } from "./types";
 
-// Baked in at build time from WXT_SERVER_URL and WXT_DASHBOARD_URL so a build
-// for your own deployment points at it out of the box. See .env.example. The
-// fallbacks match `wasp start`, and both stay editable from the popup.
-export const DEFAULT_SERVER_URL = import.meta.env.WXT_SERVER_URL || "http://localhost:3001";
-export const DEFAULT_DASHBOARD_URL = import.meta.env.WXT_DASHBOARD_URL || "http://localhost:3000";
-
-// The hosted demo. The popup offers a one click "use the demo" while these
-// are set; leave them empty and it stays hidden.
+// The hosted demo. A fresh install points here, and the popup offers a one
+// click way back to it after someone has typed other URLs.
 export const DEMO_SERVER_URL = "https://tabcast-server.fly.dev";
 export const DEMO_DASHBOARD_URL = "https://tabcast.xyz";
+
+// Where a fresh install points. Set WXT_SERVER_URL and WXT_DASHBOARD_URL at
+// build time to bake in your own deployment (or `wasp start` while
+// developing, see .env.example). Both stay editable from the popup.
+export const DEFAULT_SERVER_URL = import.meta.env.WXT_SERVER_URL || DEMO_SERVER_URL;
+export const DEFAULT_DASHBOARD_URL = import.meta.env.WXT_DASHBOARD_URL || DEMO_DASHBOARD_URL;
 
 export type Settings = {
   serverUrl: string;

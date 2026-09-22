@@ -20,7 +20,7 @@ npm run dev
 
 Load `.output/chrome-mv3` at `chrome://extensions` with Developer mode on. `npm run dev` reloads on save.
 
-Point it at a running backend (`cd app && wasp start`) and sign up in the web app first — the extension has no signup form of its own.
+A fresh install points at the hosted demo. To develop against a local backend (`cd app && wasp start`), copy `.env.example` to `.env` and use the localhost lines, or change the URLs under Server settings. Sign up in the web app first — the extension has no signup form of its own.
 
 ## Install without building
 
@@ -28,14 +28,13 @@ Grab the zip from the [latest release](https://github.com/vincanger/tabcast/rele
 
 ## Point it at a server
 
-The popup's **Server settings** take an API server URL and a dashboard URL.
+Out of the box the extension talks to the hosted demo at https://tabcast.xyz, so sign up there and log in. The popup's **Server settings** take an API server URL and a dashboard URL for anything else.
 
-- **Hosted demo.** Open Server settings and click *use the hosted demo*, or enter the URLs by hand. Sign up on the dashboard first.
 - **Your own deployment.** Enter your server and client URLs. On Fly those are the two apps `wasp deploy fly launch <name>` creates, `https://<name>-server.fly.dev` and `https://<name>-client.fly.dev`.
 
 ## Build for your own deployment
 
-To bake your URLs into the build so the popup is pre-filled, copy `.env.example` to `.env` and set them:
+To bake your URLs into the build so a fresh install points at your instance instead of the demo, copy `.env.example` to `.env` and set them:
 
 ```
 WXT_SERVER_URL=https://my-app-server.fly.dev
