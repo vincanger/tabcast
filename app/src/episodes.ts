@@ -1,6 +1,6 @@
 import { HttpError, type PrismaClient } from "wasp/server";
 import { generateEpisodeJob } from "wasp/server/jobs";
-import { FULL_READ_MAX_MINUTES, estimateMinutes, type EpisodeRequest } from "./shared/constants";
+import { FULL_READ_MAX_MINUTES, estimateMinutes, summaryMinutes, type EpisodeRequest } from "./shared/constants";
 
 type Entities = { Episode: PrismaClient["episode"]; Article: PrismaClient["article"] };
 
@@ -24,9 +24,10 @@ export async function startEpisode(
 
   // A full read is as long as the inbox. Refuse past the cap rather than
   // narrate three hours of text at per character prices.
+  const words = unused.reduce((n, a) => n + a.wordCount, 0);
   let targetMinutes: number;
   if (request.mode === "full") {
-    targetMinutes = estimateMinutes(unused.reduce((n, a) => n + a.wordCount, 0));
+    targetMinutes = estimateMinutes(words);
     if (targetMinutes > FULL_READ_MAX_MINUTES) {
       throw new HttpError(
         400,
@@ -34,7 +35,10 @@ export async function startEpisode(
       );
     }
   } else {
-    targetMinutes = request.targetMinutes;
+    // The request carries a budget. Clamp it here rather than in the client
+    // so the schedule, whose budget was saved against a different inbox,
+    // gets the same treatment.
+    targetMinutes = summaryMinutes(request.targetMinutes, words);
   }
 
   const episode = await Episode.create({

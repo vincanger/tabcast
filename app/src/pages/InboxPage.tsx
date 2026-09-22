@@ -11,9 +11,10 @@ import {
 import {
   DEFAULT_MINUTES,
   FULL_READ_MAX_MINUTES,
-  MAX_MINUTES,
-  MIN_MINUTES,
+  MINUTE_OPTIONS,
+  MIN_MINUTES_PER_ARTICLE,
   estimateMinutes,
+  summaryMinutes,
   type EpisodeMode,
 } from "../shared/constants";
 import { isInFlight, pollWhileAnyInFlight } from "../components/episode";
@@ -47,9 +48,21 @@ export function InboxPage() {
   // A full read narrates every article verbatim, so its length is the inbox's,
   // not the user's. The sentence states the estimate instead of a target.
   const fullRead = mode === "full";
-  const fullMinutes = estimateMinutes(articles.reduce((n, a) => n + a.wordCount, 0));
+  const words = articles.reduce((n, a) => n + a.wordCount, 0);
+  const fullMinutes = estimateMinutes(words);
   const overCap = fullRead && fullMinutes > FULL_READ_MAX_MINUTES;
   const canGenerate = articles.length > 0 && !inFlight && !busy && !overCap;
+
+  // The summary number is a budget. What it will actually run to is the
+  // server's arithmetic, repeated here so the sentence can say how much of
+  // that each article gets.
+  const summaryLength = summaryMinutes(minutes, words);
+  const perArticle = articles.length > 0 ? summaryLength / articles.length : 0;
+  // Nudge only when the budget is what squeezes the articles. If they are
+  // that short on their own, a longer budget changes nothing and saying so
+  // would be wrong.
+  const tooThin =
+    !fullRead && articles.length > 1 && minutes < fullMinutes && perArticle < MIN_MINUTES_PER_ARTICLE;
 
   const schedule = useScheduleSentence({ minutes, fullRead });
 
@@ -98,30 +111,38 @@ export function InboxPage() {
         <section aria-label="Generate an episode">
           <p className="font-heading text-[28px] leading-[1.35] font-normal text-balance">
             Make a{" "}
-            {!fullRead && (
-              <>
-                <InlineSelect label="Episode length" value={minutes} onChange={(v) => setMinutes(Number(v))}>
-                  {Array.from({ length: MAX_MINUTES - MIN_MINUTES + 1 }, (_, i) => {
-                    const m = MIN_MINUTES + i;
-                    return (
-                      <option key={m} value={m}>
-                        {m} minute
-                      </option>
-                    );
-                  })}
-                </InlineSelect>{" "}
-              </>
-            )}
             <InlineSelect label="Episode kind" value={mode} onChange={(v) => setMode(v as EpisodeMode)}>
               <option value="summary">summary</option>
               <option value="full">full reading</option>
             </InlineSelect>{" "}
-            {fullRead ? "of" : "from"} the {count} below
-            {fullRead && articles.length > 0 && (
+            {fullRead ? (
               <>
-                {" "}
-                (about{" "}
-                <span className={cn("tabular-nums", overCap && "text-destructive")}>{fullMinutes} minutes</span>)
+                of the {count} below
+                {articles.length > 0 && (
+                  <>
+                    {" "}
+                    (about{" "}
+                    <span className={cn("tabular-nums", overCap && "text-destructive")}>{fullMinutes} minutes</span>)
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                of up to{" "}
+                <InlineSelect label="Length budget" value={minutes} onChange={(v) => setMinutes(Number(v))}>
+                  {MINUTE_OPTIONS.map((m) => (
+                    <option key={m} value={m}>
+                      {m} minutes
+                    </option>
+                  ))}
+                </InlineSelect>{" "}
+                from the {count} below
+                {articles.length > 0 && (
+                  <>
+                    , <span className={cn("tabular-nums", tooThin && "text-destructive")}>{perArticleLabel(perArticle)}</span>
+                    {articles.length > 1 && " each"}
+                  </>
+                )}
               </>
             )}
             {schedule.clause}.
@@ -143,6 +164,12 @@ export function InboxPage() {
             <p className="mt-4 text-sm text-destructive">
               A full reading of everything here would run about {fullMinutes} minutes; the limit is{" "}
               {FULL_READ_MAX_MINUTES}. Remove some articles or switch to a summary.
+            </p>
+          )}
+          {tooThin && (
+            <p className="mt-4 text-sm text-destructive">
+              That is under a minute per article, room for a mention and not much else. Pick a longer
+              budget or remove some articles.
             </p>
           )}
           {schedule.error && <p className="mt-4 text-sm text-destructive">{schedule.error}</p>}
@@ -229,6 +256,13 @@ export function InboxPage() {
       </section>
     </div>
   );
+}
+
+// "about 4 minutes", "about a minute", "under a minute".
+function perArticleLabel(minutes: number): string {
+  if (minutes < 1) return "under a minute";
+  const n = Math.round(minutes);
+  return n === 1 ? "about a minute" : `about ${n} minutes`;
 }
 
 function formatDate(d: Date): string {

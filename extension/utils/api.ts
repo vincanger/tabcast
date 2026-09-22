@@ -16,14 +16,15 @@ export type Settings = {
   serverUrl: string;
   dashboardUrl: string;
   sessionId: string | null;
-  username: string | null;
+  // The email (or username, on a username-auth instance) shown in the popup.
+  account: string | null;
 };
 
 const DEFAULTS: Settings = {
   serverUrl: DEFAULT_SERVER_URL,
   dashboardUrl: DEFAULT_DASHBOARD_URL,
   sessionId: null,
-  username: null,
+  account: null,
 };
 
 export async function getSettings(): Promise<Settings> {
@@ -78,20 +79,23 @@ async function request<T>(
         : null) ?? (text || `Request failed with ${res.status}`);
     if (res.status === 401) {
       // The session expired or was revoked. Forget it so the popup shows login.
-      await updateSettings({ sessionId: null, username: null });
+      await updateSettings({ sessionId: null, account: null });
     }
     throw new ApiError(message, res.status);
   }
   return json as T;
 }
 
-// Wasp's built in username auth endpoint. Returns the session id we send as a bearer token.
-export async function login(username: string, password: string): Promise<void> {
-  const { sessionId } = await request<{ sessionId: string }>("/auth/username/login", {
-    body: { username, password },
+// Wasp's built in email auth endpoint. Returns the session id we send as a
+// bearer token. An instance switched to usernameAndPassword auth (see the
+// comment in app/main.wasp.ts) uses "/auth/username/login" with a body of
+// { username, password } instead; change those two lines and the label below.
+export async function login(email: string, password: string): Promise<void> {
+  const { sessionId } = await request<{ sessionId: string }>("/auth/email/login", {
+    body: { email, password },
     auth: false,
   });
-  await updateSettings({ sessionId, username });
+  await updateSettings({ sessionId, account: email });
 }
 
 export async function logout(): Promise<void> {
@@ -100,7 +104,7 @@ export async function logout(): Promise<void> {
   } catch {
     // Clear local state even if the server call fails.
   } finally {
-    await updateSettings({ sessionId: null, username: null });
+    await updateSettings({ sessionId: null, account: null });
   }
 }
 

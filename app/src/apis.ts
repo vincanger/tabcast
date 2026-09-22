@@ -106,14 +106,19 @@ async function saveArticle(
   return { result: "created", articleId: article.id, title: body.title };
 }
 
-export type ExtStatusResponse = { username: string | null; unusedCount: number };
+// `account` is whatever identifies the user: their email, or their username
+// on an instance running usernameAndPassword auth.
+export type ExtStatusResponse = { account: string | null; unusedCount: number };
 
 export const extStatusApi: ExtStatusApi<never, ExtStatusResponse> = async (_req, res, context) => {
   if (!context.user) throw new HttpError(401);
   const unusedCount = await context.entities.Article.count({
     where: { userId: context.user.id, episodeId: null },
   });
-  res.json({ username: context.user.identities.username?.id ?? null, unusedCount });
+    // Typed for the active auth method only, so read it loosely: this also has
+  // to build on an instance switched to usernameAndPassword.
+  const ids = context.user.identities as Record<string, { id: string } | null | undefined>;
+  res.json({ account: ids.email?.id ?? ids.username?.id ?? null, unusedCount });
 };
 
 // Strip fragments and common tracking params so the same article saved from

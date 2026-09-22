@@ -8,7 +8,7 @@ Built with [WXT](https://wxt.dev), React, and TypeScript, Manifest V3. It never 
 
 - **`entrypoints/background.ts`** — the service worker. Handles the toolbar click, asks the content script to parse the tab, posts the result to the backend, and shows badge feedback: green check saved, blue dot already saved, red exclamation error. While logged out the popup is attached to the icon so a click opens the login form instead.
 - **`entrypoints/content.ts`** — registered on all URLs, does nothing until asked. On request it runs Mozilla Readability on a clone of the document and returns the title, text, excerpt, site name, byline, and canonical URL. Readability misses bylines on Substack, X, and most newsletters, so the author falls back through JSON-LD, `meta[name=author]`, `article:author`, `rel=author`, microdata, and `twitter:creator`.
-- **`entrypoints/popup/`** — auth and status only. Login form when logged out; username, unused save count, dashboard link, and logout when logged in. "Server settings" overrides the API and dashboard URLs.
+- **`entrypoints/popup/`** — auth and status only. Login form when logged out; email, unused save count, dashboard link, and logout when logged in. "Server settings" overrides the API and dashboard URLs.
 - **`utils/api.ts`** — every call sends `Authorization: Bearer <sessionId>`. A 401 clears the stored session so the next click shows login.
 
 ## Develop

@@ -2,8 +2,15 @@ import { action, api, apiNamespace, app, job, page, query, route } from "@wasp.s
 
 import { serverEnvValidationSchema } from "./src/env" with { type: "ref" };
 import { Root } from "./src/Root" with { type: "ref" };
-import { LoginPage, SignupPage } from "./src/auth/pages" with { type: "ref" };
+import {
+  LoginPage,
+  SignupPage,
+  EmailVerificationPage,
+  RequestPasswordResetPage,
+  PasswordResetPage,
+} from "./src/auth/email/pages" with { type: "ref" };
 import { onBeforeSignup } from "./src/auth/hooks" with { type: "ref" };
+import { verificationEmail, passwordResetEmail } from "./src/auth/email/emails" with { type: "ref" };
 import { InboxPage } from "./src/pages/InboxPage" with { type: "ref" };
 import { EpisodesPage } from "./src/pages/EpisodesPage" with { type: "ref" };
 import { EpisodePage } from "./src/pages/EpisodePage" with { type: "ref" };
@@ -32,12 +39,36 @@ export default app({
   title: 'Tabcast',
   head: ["<link rel='icon' href='/favicon.ico' />"],
   // TODO (AGENT): add og image and head stuff and plausible analytic and social media stuff
+  // Verification and password reset emails go out through Resend from the
+  // address below. Needs RESEND_API_KEY in .env.server and the domain
+  // verified in Resend. See EMAILER_PLAN.md.
+  emailSender: {
+    provider: 'Resend',
+    defaultFrom: { name: 'Tabcast', email: 'info@tabcast.xyz' },
+  },
   auth: {
     userEntity: 'User',
-    methods: { 
-      // Username and password so a self-hosted deploy needs no email provider.
-      // There is no password reset; reset one with `wasp db studio` if you must.
-      usernameAndPassword: {},
+    methods: {
+      // Self-hosting and do not want an email provider? Comment out `email`,
+      // uncomment `usernameAndPassword`, drop the `emailSender` block above,
+      // the three email routes below and their imports, delete src/auth/email/
+      // (Wasp only generates the email auth functions while that method is on),
+      // and route the pages from src/auth/username/pages.tsx. There is no
+      // password reset in that mode; fix one with `wasp db studio`. The
+      // extension then logs in against /auth/username/login, see
+      // extension/utils/api.ts.
+      // usernameAndPassword: {},
+      email: {
+        fromField: { name: 'Tabcast', email: 'info@tabcast.xyz' },
+        emailVerification: {
+          clientRoute: 'EmailVerificationRoute',
+          getEmailContentFn: verificationEmail,
+        },
+        passwordReset: {
+          clientRoute: 'PasswordResetRoute',
+          getEmailContentFn: passwordResetEmail,
+        },
+      },
     },
     onBeforeSignup,
     onAuthFailedRedirectTo: '/login',
@@ -55,6 +86,9 @@ export default app({
     // Auth
     route('LoginRoute', '/login', page(LoginPage)),
     route('SignupRoute', '/signup', page(SignupPage)),
+    route('EmailVerificationRoute', '/email-verification', page(EmailVerificationPage)),
+    route('RequestPasswordResetRoute', '/request-password-reset', page(RequestPasswordResetPage)),
+    route('PasswordResetRoute', '/password-reset', page(PasswordResetPage)),
 
     // Operations used by the dashboard
     query(getInbox, { entities: ['Article'] }),

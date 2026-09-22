@@ -20,6 +20,8 @@ docker-compose.yml  Local S3 (MinIO) for development
 The extension isn't on the Chrome Web Store yet, so it loads as an unpacked extension.
 
 1. Download the zip from the [latest release](https://github.com/vincanger/tabcast/releases/latest) and unzip it. Or build it yourself: `cd extension && npm install && npm run build` produces `extension/.output/chrome-mv3`.
+<!-- TODO (AGENT): add the zip file to the release. -->
+<!-- TODO (AGENT): add a link to the Chrome Web Store listing once it is live. -->
 2. Open `chrome://extensions`, turn on **Developer mode** (top right), click **Load unpacked**, and pick the folder.
 3. Pin the icon from the puzzle piece menu and click it once to open the popup.
 
@@ -85,14 +87,18 @@ The extension never imports app code. It uses Wasp's built in auth endpoints and
 
 | Call | Purpose |
 | --- | --- |
-| `POST /auth/username/login` | Returns a session id, sent later as `Authorization: Bearer` |
+| `POST /auth/email/login` | Returns a session id, sent later as `Authorization: Bearer` |
 | `POST /auth/logout` | Ends the session |
-| `GET /api/ext/status` | Username and number of unused saves, used by the popup |
+| `GET /api/ext/status` | Account email and number of unused saves, used by the popup |
 | `POST /api/ext/articles` | Saves a parsed article, returns `created` or `duplicate` |
 | `POST /api/save/:token` | Same body from the iOS Shortcut, authenticated by a per user token instead of a session |
 
 ## Deploying
 
-The Wasp app deploys like any other Wasp app (`wasp deploy fly` or Railway). Set the server env vars from `.env.server.example` on the host, replacing the MinIO values with a real S3 compatible bucket: your own credentials, and `S3_ENDPOINT` either unset for AWS or pointed at your provider. Auth is username and password, so there is no email provider to configure. Set `SIGNUPS_OPEN=false` once you have created your account if the instance is just for you: the signup page stays, but the server refuses every new account, including ones attempted with curl against `/auth/username/signup`.
+The Wasp app deploys like any other Wasp app (`wasp deploy fly` or Railway). Set the server env vars from `.env.server.example` on the host, replacing the MinIO values with a real S3 compatible bucket: your own credentials, and `S3_ENDPOINT` either unset for AWS or pointed at your provider. Auth is email and password, with verification and password reset sent through [Resend](https://resend.com): verify your domain there, put the key in `RESEND_API_KEY`, and change the two `info@tabcast.xyz` addresses in `main.wasp.ts` to yours. Set `SIGNUPS_OPEN=false` once you have created your account if the instance is just for you: the signup page stays, but the server refuses every new account, including ones attempted with curl against `/auth/email/signup`.
+
+### Auth without an email provider
+
+If your instance is just for you, an email provider is more setup than it is worth. In `main.wasp.ts`, comment out the `email` method and the `emailSender` block, uncomment `usernameAndPassword`, drop the three email routes and their imports, delete `app/src/auth/email/` (Wasp only generates the email auth functions while that method is on, so those files stop compiling), and route the two pages from `app/src/auth/username/pages.tsx` in place of the email ones. The comment on the auth block walks through it, and `wasp compile` tells you if anything was missed. In the extension, switch the login call in `utils/api.ts` to `/auth/username/login` with a `{ username, password }` body. There is no password reset in that mode; change one with `wasp db studio`.
 
 For the extension, copy `extension/.env.example` to `extension/.env`, set `WXT_SERVER_URL` and `WXT_DASHBOARD_URL` to your deployed URLs, and rebuild — the build then points at your instance out of the box. You can also leave the build alone and override both URLs under "Server settings" in the popup.

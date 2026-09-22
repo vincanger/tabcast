@@ -46,12 +46,12 @@ export function Root() {
                   Setup
                 </NavLink>
                 <span className="hidden normal-case tracking-normal sm:inline">
-                  {user.identities.username?.id}
+                  {accountLabel(user.identities)}
                 </span>
                 <button
                   type="button"
                   onClick={() => logout()}
-                  className="kicker py-1 hover:text-foreground"
+                  className="kicker py-1 hover:text-foreground hover:cursor-pointer"
                 >
                   Log out
                 </button>
@@ -71,6 +71,13 @@ export function Root() {
       </main>
     </div>
   );
+}
+
+// Wasp types `identities` for the active auth method only. This reads whichever
+// exists, so the header works on an instance switched to username auth.
+function accountLabel(identities: object): string {
+  const ids = identities as Record<string, { id: string } | null | undefined>;
+  return ids.email?.id ?? ids.username?.id ?? "";
 }
 
 function NavLink({
