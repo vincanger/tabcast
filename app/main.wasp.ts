@@ -38,8 +38,15 @@ export default app({
   name: 'articleToPodcast',
   wasp: { version: '^0.25.0' },
   title: 'Tabcast',
-  head: ["<link rel='icon' href='/favicon.ico' />"],
-  // TODO (AGENT): add og image and head stuff and plausible analytic and social media stuff
+  head: [
+    "<link rel='icon' href='/favicon.ico' />",
+    // Privacy friendly analytics. Plausible ignores localhost, so this is
+    // inert under `wasp start`. The init snippet is public/plausible.js.
+    // Swap the script for yours or drop these two lines on your own instance.
+    '<script src="/plausible.js"></script>',
+    '<script async src="https://plausible.io/js/pa-6iJ9K33LK98nOMyEjMM-j.js"></script>',
+  ],
+  // TODO (AGENT): add og image and social media meta tags.
   // Verification and password reset emails go out through Resend from the
   // address below. Needs RESEND_API_KEY in .env.server and the domain
   // verified in Resend. See EMAILER_PLAN.md.

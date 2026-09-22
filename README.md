@@ -98,7 +98,7 @@ The extension never imports app code. It uses Wasp's built in auth endpoints and
 ### Try the demo
 
 <!-- TODO (AGENT): fill in the demo dashboard URL once it is on Fly. -->
-The hosted demo at `https://TODO.fly.dev` is this repo, deployed as is, with `EPISODES_PER_USER=2`. Sign up, save a few articles, and make two episodes. After that the inbox asks you to deploy your own, which is the point: the demo exists to show the app, and your own instance has no limit and runs on your own OpenAI key.
+The hosted demo at `https://TODO.fly.dev` is this repo, deployed as is, with `EPISODES_PER_USER=3`. Sign up, save a few articles, and make three episodes. After that the inbox asks you to deploy your own, which is the point: the demo exists to show the app, and your own instance has no limit and runs on your own OpenAI key.
 
 ### Run your own
 

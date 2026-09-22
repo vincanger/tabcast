@@ -11,7 +11,7 @@ export const serverEnvValidationSchema = defineEnvValidationSchema(
       .transform((v) => v === "true"),
 
     // Episodes an account may generate, counting scheduled ones and not
-    // counting failures. 0 means no limit. The hosted demo sets 2 and points
+    // counting failures. 0 means no limit. The hosted demo sets 3 and points
     // people at deploying their own.
     EPISODES_PER_USER: z.coerce.number().int().min(0).default(0),
 
