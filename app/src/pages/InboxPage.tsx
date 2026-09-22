@@ -4,6 +4,7 @@ import { Trash2 } from "lucide-react";
 import {
   deleteArticle,
   generateEpisode,
+  getEpisodeLimit,
   getEpisodes,
   getInbox,
   useQuery,
@@ -35,6 +36,9 @@ export function InboxPage() {
     refetchInterval: pollWhileAnyInFlight,
   });
   const enter = useEnterOnce("inbox");
+  // Null limit means this instance has no cap; the hosted demo has one.
+  const { data: quota } = useQuery(getEpisodeLimit);
+  const capped = !!quota?.limit && quota.used >= quota.limit;
 
   const [mode, setMode] = useState<EpisodeMode>("summary");
   const [minutes, setMinutes] = useState(DEFAULT_MINUTES);
@@ -51,7 +55,7 @@ export function InboxPage() {
   const words = articles.reduce((n, a) => n + a.wordCount, 0);
   const fullMinutes = estimateMinutes(words);
   const overCap = fullRead && fullMinutes > FULL_READ_MAX_MINUTES;
-  const canGenerate = articles.length > 0 && !inFlight && !busy && !overCap;
+  const canGenerate = articles.length > 0 && !inFlight && !busy && !overCap && !capped;
 
   // The summary number is a budget. What it will actually run to is the
   // server's arithmetic, repeated here so the sentence can say how much of
@@ -107,6 +111,8 @@ export function InboxPage() {
             </Link>
           </p>
         </div>
+      ) : capped ? (
+        <DeployPitch limit={quota!.limit!} />
       ) : (
         <section aria-label="Generate an episode">
           <p className="font-heading text-[28px] leading-[1.35] font-normal text-balance">
@@ -164,6 +170,19 @@ export function InboxPage() {
             <p className="mt-4 text-sm text-destructive">
               A full reading of everything here would run about {fullMinutes} minutes; the limit is{" "}
               {FULL_READ_MAX_MINUTES}. Remove some articles or switch to a summary.
+            </p>
+          )}
+          {quota?.limit && (
+            <p className="kicker mt-4">
+              {quota.used} of {quota.limit} demo episode{quota.limit === 1 ? "" : "s"} used ·{" "}
+              <a
+                href={DEPLOY_URL}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="underline decoration-border underline-offset-4 hover:text-foreground"
+              >
+                Run your own for unlimited →
+              </a>
             </p>
           )}
           {tooThin && (
@@ -255,6 +274,35 @@ export function InboxPage() {
         )}
       </section>
     </div>
+  );
+}
+
+const DEPLOY_URL = "https://github.com/vincanger/tabcast#deploying";
+
+// Shown in place of the generate sentence once a demo account has used its
+// episodes. This is the moment the demo exists for, so it reads like the
+// rest of the page and not like an error.
+function DeployPitch({ limit }: { limit: number }) {
+  return (
+    <section aria-label="Deploy your own">
+      <p className="font-heading text-[28px] leading-[1.35] font-normal text-balance">
+        That's the {limit} episode{limit === 1 ? "" : "s"} this demo allows. Your own Tabcast has no
+        limit, runs on your own OpenAI key, and takes about ten minutes to put on Fly.
+      </p>
+      <p className="mt-5">
+        <a
+          href={DEPLOY_URL}
+          target="_blank"
+          rel="noreferrer noopener"
+          className="kicker inline-block py-1 underline decoration-border underline-offset-4 hover:text-rubric"
+        >
+          Deploy your own →
+        </a>
+      </p>
+      <p className="mt-6 font-serif italic text-muted-foreground">
+        Your episodes stay playable here and in your podcast app.
+      </p>
+    </section>
   );
 }
 

@@ -3,6 +3,7 @@ import type {
   DeleteArticle,
   GenerateEpisode,
   GetEpisode,
+  GetEpisodeLimit,
   GetEpisodes,
   GetFeed,
   GetSaveShortcut,
@@ -17,7 +18,7 @@ import { getSignedAudioUrl } from "./lib/s3";
 import { feedUrl } from "./feed";
 import { saveUrl } from "./apis";
 import { newSecretToken } from "./lib/token";
-import { startEpisode } from "./episodes";
+import { episodeLimit, startEpisode } from "./episodes";
 import { EVERY_DAYS_OPTIONS, TICK_MINUTES, firstRun } from "./lib/schedule";
 
 import { MAX_MINUTES, MIN_MINUTES, type EpisodeRequest } from "./shared/constants";
@@ -122,6 +123,14 @@ export const generateEpisode: GenerateEpisode<EpisodeRequest, { episodeId: numbe
     throw new HttpError(400, "Unknown episode mode.");
   }
   return startEpisode(context.user.id, request, context.entities);
+};
+
+export const getEpisodeLimit: GetEpisodeLimit<void, { limit: number | null; used: number }> = async (
+  _args,
+  context,
+) => {
+  if (!context.user) throw new HttpError(401);
+  return episodeLimit(context.user.id, context.entities.Episode);
 };
 
 function validMinutes(n: number): boolean {

@@ -1,4 +1,4 @@
-import { HttpError, type PrismaClient } from "wasp/server";
+import { HttpError, env, type PrismaClient } from "wasp/server";
 import { generateEpisodeJob } from "wasp/server/jobs";
 import { FULL_READ_MAX_MINUTES, estimateMinutes, summaryMinutes, type EpisodeRequest } from "./shared/constants";
 
@@ -15,6 +15,11 @@ export async function startEpisode(
     where: { userId, status: { in: ["pending", "generating"] } },
   });
   if (inFlight) throw new HttpError(409, "An episode is already being generated.");
+
+  const limit = await episodeLimit(userId, Episode);
+  if (limit.limit !== null && limit.used >= limit.limit) {
+    throw new HttpError(403, `This instance allows ${limit.limit} episodes per account.`);
+  }
 
   const unused = await Article.findMany({
     where: { userId, episodeId: null },
@@ -51,4 +56,15 @@ export async function startEpisode(
 
   await generateEpisodeJob.submit({ episodeId: episode.id });
   return { episodeId: episode.id };
+}
+
+// How many episodes the account may still make. `limit` is null when the
+// instance has no cap. Failed episodes are not held against anyone.
+export async function episodeLimit(
+  userId: number,
+  Episode: PrismaClient["episode"],
+): Promise<{ limit: number | null; used: number }> {
+  if (env.EPISODES_PER_USER === 0) return { limit: null, used: 0 };
+  const used = await Episode.count({ where: { userId, status: { not: "failed" } } });
+  return { limit: env.EPISODES_PER_USER, used };
 }

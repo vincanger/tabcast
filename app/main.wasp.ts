@@ -19,6 +19,7 @@ import {
   deleteArticle,
   generateEpisode,
   getEpisode,
+  getEpisodeLimit,
   getEpisodes,
   getFeed,
   getInbox,
@@ -93,6 +94,7 @@ export default app({
     // Operations used by the dashboard
     query(getInbox, { entities: ['Article'] }),
     query(getEpisodes, { entities: ['Episode'] }),
+    query(getEpisodeLimit, { entities: ['Episode'] }),
     query(getEpisode, { entities: ['Episode'] }),
     action(deleteArticle, { entities: ['Article'] }),
     action(generateEpisode, { entities: ['Article', 'Episode'] }),

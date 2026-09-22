@@ -1,6 +1,6 @@
 // Summary length is a budget, not a target: "up to 20 minutes". The steps
 // grow with the number because 55 versus 60 is not a choice anyone makes.
-export const MINUTE_OPTIONS = [5, 10, 15, 20, 30, 45, 60, 90, 120] as const;
+export const MINUTE_OPTIONS = [5, 10, 15, 20, 30, 45, 60, 90] as const;
 export const MIN_MINUTES = MINUTE_OPTIONS[0];
 export const MAX_MINUTES = MINUTE_OPTIONS[MINUTE_OPTIONS.length - 1];
 export const DEFAULT_MINUTES = 10;

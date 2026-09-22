@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router";
 import { logout, useAuth } from "wasp/client/auth";
 import { cn } from "./lib/utils";
+import { PoweredBy } from "./components/PoweredBy";
 import "./Main.css";
 
 // The header runs the full width of the page, its contents held to a 1200px
@@ -69,6 +70,7 @@ export function Root() {
       <main className="mx-auto w-full max-w-[640px] px-6 pt-20 pb-16 2xl:max-w-[800px]">
         <Outlet />
       </main>
+      <PoweredBy />
     </div>
   );
 }

@@ -95,7 +95,14 @@ The extension never imports app code. It uses Wasp's built in auth endpoints and
 
 ## Deploying
 
-The Wasp app deploys like any other Wasp app (`wasp deploy fly` or Railway). Set the server env vars from `.env.server.example` on the host, replacing the MinIO values with a real S3 compatible bucket: your own credentials, and `S3_ENDPOINT` either unset for AWS or pointed at your provider. Auth is email and password, with verification and password reset sent through [Resend](https://resend.com): verify your domain there, put the key in `RESEND_API_KEY`, and change the two `info@tabcast.xyz` addresses in `main.wasp.ts` to yours. Set `SIGNUPS_OPEN=false` once you have created your account if the instance is just for you: the signup page stays, but the server refuses every new account, including ones attempted with curl against `/auth/email/signup`.
+### Try the demo
+
+<!-- TODO (AGENT): fill in the demo dashboard URL once it is on Fly. -->
+The hosted demo at `https://TODO.fly.dev` is this repo, deployed as is, with `EPISODES_PER_USER=2`. Sign up, save a few articles, and make two episodes. After that the inbox asks you to deploy your own, which is the point: the demo exists to show the app, and your own instance has no limit and runs on your own OpenAI key.
+
+### Run your own
+
+The Wasp app deploys like any other Wasp app (`wasp deploy fly` or Railway). Set the server env vars from `.env.server.example` on the host, replacing the MinIO values with a real S3 compatible bucket: your own credentials, and `S3_ENDPOINT` either unset for AWS or pointed at your provider. Auth is email and password, with verification and password reset sent through [Resend](https://resend.com): verify your domain there, put the key in `RESEND_API_KEY`, and change the two `info@tabcast.xyz` addresses in `main.wasp.ts` to yours. Leave `EPISODES_PER_USER` unset or `0` for no cap. Set `SIGNUPS_OPEN=false` once you have created your account if the instance is just for you: the signup page stays, but the server refuses every new account, including ones attempted with curl against `/auth/email/signup`.
 
 ### Auth without an email provider
 

@@ -10,6 +10,11 @@ export const serverEnvValidationSchema = defineEnvValidationSchema(
       .default("true")
       .transform((v) => v === "true"),
 
+    // Episodes an account may generate, counting scheduled ones and not
+    // counting failures. 0 means no limit. The hosted demo sets 2 and points
+    // people at deploying their own.
+    EPISODES_PER_USER: z.coerce.number().int().min(0).default(0),
+
     OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required."),
     OPENAI_SCRIPT_MODEL: z.string().default("gpt-4o-mini"),
     OPENAI_TTS_MODEL: z.string().default("tts-1"),
