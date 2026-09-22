@@ -20,7 +20,6 @@ docker-compose.yml  Local S3 (MinIO) for development
 The extension isn't on the Chrome Web Store yet, so it loads as an unpacked extension.
 
 1. Download the zip from the [latest release](https://github.com/vincanger/tabcast/releases/latest) and unzip it. Or build it yourself: `cd extension && npm install && npm run build` produces `extension/.output/chrome-mv3`.
-<!-- TODO (AGENT): add the zip file to the release. -->
 <!-- TODO (AGENT): add a link to the Chrome Web Store listing once it is live. -->
 2. Open `chrome://extensions`, turn on **Developer mode** (top right), click **Load unpacked**, and pick the folder.
 3. Pin the icon from the puzzle piece menu and click it once to open the popup.
@@ -99,7 +98,18 @@ The hosted demo at [https://tabcast.xyz](https://tabcast.xyz) is this repo, depl
 
 ### Run your own
 
-The Wasp app deploys like any other Wasp app (`wasp deploy fly` or Railway). Set the server env vars from `.env.server.example` on the host, replacing the MinIO values with a real S3 compatible bucket: your own credentials, and `S3_ENDPOINT` either unset for AWS or pointed at your provider. Auth is email and password, with verification and password reset sent through [Resend](https://resend.com): verify your domain there, put the key in `RESEND_API_KEY`, and change the two `info@mail.tabcast.xyz` addresses in `main.wasp.ts` to yours (Resend recommends a sending subdomain like `mail.`, but the root domain works too). Leave `EPISODES_PER_USER` unset or `0` for no cap. Set `SIGNUPS_OPEN=false` once you have created your account if the instance is just for you: the signup page stays, but the server refuses every new account, including ones attempted with curl against `/auth/email/signup`.
+The Wasp app deploys like any other Wasp app. The demo runs on [Fly.io](https://fly.io) with a [Tigris](https://www.tigrisdata.com) bucket for audio, and that is the path with the fewest moving parts, since Fly creates the bucket and its credentials for you. From `app/`:
+
+```bash
+wasp deploy fly setup <name> <region> --org <org>   # creates <name>-server and <name>-client
+fly storage create -a <name>-server -n <name>-audio  # Tigris bucket, prints the credentials once
+wasp deploy fly create-db <region> --org <org>
+wasp deploy fly deploy --org <org>
+```
+
+Between the second and last step, set the server secrets with `fly secrets set -a <name>-server`: the bucket's access key and secret as `S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY`, `S3_BUCKET=<name>-audio`, `S3_REGION=auto`, `S3_ENDPOINT=https://fly.storage.tigris.dev`, plus `OPENAI_API_KEY` and `RESEND_API_KEY`. Tigris also sets its own `AWS_*` secrets on the app, which this code ignores. Commit the `fly-server.toml` and `fly-client.toml` that setup writes; from then on `wasp deploy fly deploy` is the whole release. Any other host works too (Railway, or anything that runs a Node server and a static client): set the env vars from `.env.server.example`, replacing the MinIO values with a real S3 compatible bucket, and `S3_ENDPOINT` either unset for AWS or pointed at your provider.
+
+For a custom domain, `fly certs create yourdomain.com -a <name>-client` prints the A and AAAA records to add, and the server needs `WASP_WEB_CLIENT_URL=https://yourdomain.com` so CORS and the email links use it. The link preview image URL in `main.wasp.ts` is absolute too, so change it with the domain. Auth is email and password, with verification and password reset sent through [Resend](https://resend.com): verify your domain there, put the key in `RESEND_API_KEY`, and change the two `info@mail.tabcast.xyz` addresses in `main.wasp.ts` to yours (Resend recommends a sending subdomain like `mail.`, but the root domain works too). Leave `EPISODES_PER_USER` unset or `0` for no cap. Set `SIGNUPS_OPEN=false` once you have created your account if the instance is just for you: the signup page stays, but the server refuses every new account, including ones attempted with curl against `/auth/email/signup`.
 
 ### Auth without an email provider
 

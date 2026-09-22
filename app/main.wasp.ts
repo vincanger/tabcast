@@ -45,8 +45,20 @@ export default app({
     // Swap the script for yours or drop these two lines on your own instance.
     '<script src="/plausible.js"></script>',
     '<script async src="https://plausible.io/js/pa-6iJ9K33LK98nOMyEjMM-j.js"></script>',
+    // Link previews. The image URL has to be absolute, so change it along
+    // with the domain when you deploy your own; the file is public/og.png.
+    "<meta name='description' content='Save articles from Chrome with one click. Tabcast turns everything you saved into a short narrated podcast.' />",
+    "<meta property='og:type' content='website' />",
+    "<meta property='og:site_name' content='Tabcast' />",
+    "<meta property='og:title' content='Tabcast' />",
+    "<meta property='og:description' content='Save articles from Chrome with one click. Tabcast turns everything you saved into a short narrated podcast.' />",
+    "<meta property='og:url' content='https://tabcast.xyz/' />",
+    "<meta property='og:image' content='https://tabcast.xyz/og.png' />",
+    "<meta property='og:image:width' content='1200' />",
+    "<meta property='og:image:height' content='630' />",
+    "<meta name='twitter:card' content='summary_large_image' />",
+    "<meta name='twitter:image' content='https://tabcast.xyz/og.png' />",
   ],
-  // TODO (AGENT): add og image and social media meta tags.
   // Verification and password reset emails go out through Resend from the
   // address below. Needs RESEND_API_KEY in .env.server and the domain
   // verified in Resend. See EMAILER_PLAN.md.
