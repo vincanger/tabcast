@@ -31,7 +31,6 @@ Grab the zip from the [latest release](https://github.com/vincanger/tabcast/rele
 The popup's **Server settings** take an API server URL and a dashboard URL.
 
 - **Hosted demo.** Open Server settings and click *use the hosted demo*, or enter the URLs by hand. Sign up on the dashboard first.
-  <!-- TODO (AGENT): fill in the demo URLs here once deployed, and in utils/api.ts. -->
 - **Your own deployment.** Enter your server and client URLs. On Fly those are the two apps `wasp deploy fly launch <name>` creates, `https://<name>-server.fly.dev` and `https://<name>-client.fly.dev`.
 
 ## Build for your own deployment

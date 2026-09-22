@@ -31,8 +31,7 @@ Chrome reminds you about developer mode extensions on each launch until the Web 
 
 The popup's **Server settings** take an API server URL and a dashboard URL. Two options:
 
-- **Use the hosted demo.** Sign up on the demo dashboard, then in Server settings click *use the hosted demo* (or enter the URLs by hand) and log in.
-  <!-- TODO (AGENT): fill in the demo dashboard and API URLs here once deployed. They also go in extension/utils/api.ts and extension/.env.example. -->
+- **Use the hosted demo.** Sign up at [https://tabcast-client.fly.dev](https://tabcast-client.fly.dev), then in Server settings click *use the hosted demo* and log in. By hand, the API server is `https://tabcast-server.fly.dev` and the dashboard is `https://tabcast-client.fly.dev`.
 - **Use your own deployment.** Enter the URLs of your deployed server and client. On Fly those are the two apps `wasp deploy fly launch <name>` creates: `https://<name>-server.fly.dev` and `https://<name>-client.fly.dev`. To ship a build with them pre-filled, see [Deploying](#deploying).
 
 ## Run it locally
@@ -97,8 +96,7 @@ The extension never imports app code. It uses Wasp's built in auth endpoints and
 
 ### Try the demo
 
-<!-- TODO (AGENT): fill in the demo dashboard URL once it is on Fly. -->
-The hosted demo at `https://TODO.fly.dev` is this repo, deployed as is, with `EPISODES_PER_USER=3`. Sign up, save a few articles, and make three episodes. After that the inbox asks you to deploy your own, which is the point: the demo exists to show the app, and your own instance has no limit and runs on your own OpenAI key.
+The hosted demo at [https://tabcast-client.fly.dev](https://tabcast-client.fly.dev) is this repo, deployed as is, with `EPISODES_PER_USER=3`. Sign up, save a few articles, and make three episodes. After that the inbox asks you to deploy your own, which is the point: the demo exists to show the app, and your own instance has no limit and runs on your own OpenAI key.
 
 ### Run your own
 

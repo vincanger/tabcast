@@ -8,9 +8,8 @@ export const DEFAULT_DASHBOARD_URL = import.meta.env.WXT_DASHBOARD_URL || "http:
 
 // The hosted demo. The popup offers a one click "use the demo" while these
 // are set; leave them empty and it stays hidden.
-// TODO (AGENT): fill in once the demo is deployed to Fly.
-export const DEMO_SERVER_URL = "";
-export const DEMO_DASHBOARD_URL = "";
+export const DEMO_SERVER_URL = "https://tabcast-server.fly.dev";
+export const DEMO_DASHBOARD_URL = "https://tabcast-client.fly.dev";
 
 export type Settings = {
   serverUrl: string;
