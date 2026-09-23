@@ -5,8 +5,9 @@ import { SourceIcon } from "../components/SourceIcon";
 import { Button } from "../components/ui/button";
 import { cn } from "../lib/utils";
 
-// The public front page. A single header bar with the wordmark and the two
-// entry points, then the hero. Everything is set on the app's own tokens with a
+// The public front page. The header, closing call to action and footer share
+// one 720px column; the hero spreads wider to fit the product mock beside the
+// copy, and the reading sections sit in a 672px column. Everything is set on the app's own tokens with a
 // 22px spacing step, so the page reads as the same paper as the dashboard.
 const REPO_URL = "https://github.com/vincanger/tabcast";
 const EXTENSION_URL = `${REPO_URL}/releases/latest`;
@@ -44,8 +45,8 @@ export function LandingPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b px-6 sm:px-10">
-        <div className="mx-auto flex w-full max-w-[1100px] flex-wrap items-center justify-between gap-x-6 gap-y-3 py-5">
+      <header className="border-b">
+        <div className="mx-auto flex w-full max-w-[1000px] flex-wrap items-center justify-between gap-x-6 gap-y-3 px-10 lg:px-6 py-5">
           <Link to="/" className="font-heading text-[22px] leading-none font-medium tracking-tight">
             Tabcast
           </Link>
@@ -133,30 +134,31 @@ export function LandingPage() {
       </section>
 
       <section aria-labelledby="closing-heading" className="border-t">
-        <div className="mx-auto grid w-full max-w-[672px] justify-items-start gap-[22px] px-6 py-[55px]">
+        <div className="mx-auto w-full max-w-[720px] flex flex-col items-center gap-[22px] px-6 py-[55px]">
           <h2
             id="closing-heading"
-            className="max-w-[22ch] font-heading text-[32px] leading-[1.1] font-medium tracking-[-0.02em] text-balance"
+            className="max-w-[22ch] font-heading text-[32px] leading-[1.1] font-medium tracking-[-0.02em] text-balance text-center"
           >
             Stop saving articles you will never read.
           </h2>
           <PrimaryButton href={demoTo}>Try it now</PrimaryButton>
         </div>
       </section>
+ 
 
       <footer className="border-t">
-        <div className="kicker mx-auto w-full max-w-[672px] px-6 py-[18px]">
-          <div className="flex w-full items-center justify-between">
+        <div className="kicker mx-auto w-full max-w-[1000px] px-10 lg:px-0 py-[18px]">
 
-            <nav aria-label="Site" className="flex items-center gap-x-5">
+            <nav aria-label="Site" className="flex flex-col items-end gap-y-2 justify-end">
+
               <a href={REPO_URL} target="_blank" rel="noreferrer noopener" className="py-1 hover:text-foreground">
-                Source on GitHub
+                View the Source on GitHub
               </a>
               <a href="https://wasp.sh" target="_blank" rel="noreferrer noopener" className="py-1 hover:text-foreground">
                 Built with Wasp {'=}'}
               </a>
             </nav>
-          </div>
+
         </div>
    
       </footer>
