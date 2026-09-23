@@ -125,6 +125,8 @@ export function InboxPage() {
         </div>
       ) : capped ? (
         <DeployPitch limit={quota!.limit!} />
+      ) : !inbox.isLoading && articles.length === 0 ? (
+        <GetSetUp />
       ) : (
         <section aria-label="Generate an episode">
           <p className="font-heading text-[28px] leading-[1.35] font-normal text-balance">
@@ -222,11 +224,6 @@ export function InboxPage() {
             <p className="mt-1 font-serif italic text-muted-foreground">
               Articles arrive from the Chrome extension, or from your iPhone's share sheet.
             </p>
-            <p className="kicker mt-4">
-              <Link to="/setup" className="inline-block py-1 underline decoration-border underline-offset-4 hover:text-foreground">
-                Set up the extension or your iPhone →
-              </Link>
-            </p>
           </div>
         )}
         {articles.length > 0 && (
@@ -277,6 +274,27 @@ export function InboxPage() {
 }
 
 const DEPLOY_URL = "https://github.com/vincanger/tabcast#deploying";
+
+// Takes the place of the generate sentence while the inbox is empty. There
+// is nothing to generate from yet, so the one thing to do is get the
+// extension or the iPhone shortcut set up.
+function GetSetUp() {
+  return (
+    <section aria-label="Get set up">
+      <p className="font-heading text-[28px] leading-[1.35] font-normal text-balance">
+        Save an article and it lands here. Episodes are made from whatever is in the inbox.
+      </p>
+      <p className="mt-5">
+        <Link
+          to="/setup"
+          className="kicker inline-block py-1 underline decoration-border underline-offset-4 hover:text-rubric"
+        >
+          Get set up to start saving articles →
+        </Link>
+      </p>
+    </section>
+  );
+}
 
 // Shown in place of the generate sentence once a demo account has used its
 // episodes. This is the moment the demo exists for, so it reads like the
