@@ -3,6 +3,7 @@ import { estimateDurationSeconds, narrate, scriptText, writeFullScript, writeScr
 import { mp3DurationSeconds } from "../lib/mp3";
 import { withChapterTags } from "../lib/id3";
 import { episodeAudioKey, uploadEpisodeAudio } from "../lib/s3";
+import { failEpisode } from "../episodes";
 
 type Input = { episodeId: number };
 
@@ -17,9 +18,15 @@ export const generateEpisodeJob: GenerateEpisodeJob<Input, void> = async ({ epis
     console.warn(`[generateEpisode] Episode ${episodeId} no longer exists.`);
     return;
   }
-  if (episode.status !== "pending") {
+  // "generating" here means an earlier attempt died with its worker (a deploy
+  // or a stopped machine) and pg-boss has retried the job. Every step below
+  // is safe to repeat, so start over from the script.
+  if (episode.status !== "pending" && episode.status !== "generating") {
     console.warn(`[generateEpisode] Episode ${episodeId} is ${episode.status}, skipping.`);
     return;
+  }
+  if (episode.status === "generating") {
+    console.warn(`[generateEpisode] Episode ${episodeId} was left generating, starting over.`);
   }
 
   await Episode.update({
@@ -85,8 +92,11 @@ export const generateEpisodeJob: GenerateEpisodeJob<Input, void> = async ({ epis
       at += seconds[i + 1];
     }
 
-    await Episode.update({
-      where: { id: episodeId },
+    // The user may have cancelled while this ran. Only a row still in flight
+    // becomes ready; a cancelled one keeps its failed state and its articles
+    // are already back in the inbox, so the finished audio is simply dropped.
+    const { count } = await Episode.updateMany({
+      where: { id: episodeId, status: "generating" },
       data: {
         status: "ready",
         phase: null,
@@ -98,15 +108,16 @@ export const generateEpisodeJob: GenerateEpisodeJob<Input, void> = async ({ epis
         completedAt: new Date(),
       },
     });
+    if (count === 0) {
+      console.warn(`[generateEpisode] Episode ${episodeId} was cancelled before it finished.`);
+      return;
+    }
     console.log(`[generateEpisode] Episode ${episodeId} ready (${durationSeconds}s).`);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error(`[generateEpisode] Episode ${episodeId} failed: ${message}`);
-    // Return the articles to the inbox so the user can try again.
-    await Article.updateMany({ where: { episodeId }, data: { episodeId: null, startSeconds: null } });
-    await Episode.update({
-      where: { id: episodeId },
-      data: { status: "failed", phase: null, error: message, completedAt: new Date() },
-    });
+    // Return the articles to the inbox so the user can try again. A no-op if
+    // the user already cancelled.
+    await failEpisode(episodeId, message, { Episode, Article });
   }
 };

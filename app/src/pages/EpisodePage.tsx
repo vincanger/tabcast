@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { Link, useParams } from "react-router";
 import { Play } from "lucide-react";
-import { getEpisode, useQuery } from "wasp/client/operations";
+import { cancelEpisode, getEpisode, useQuery } from "wasp/client/operations";
 import { StatusBadge, formatDuration, isInFlight, pollWhileInFlight } from "../components/episode";
 import { AudioPlayer, type AudioPlayerHandle } from "../components/AudioPlayer";
 import { EpisodeCover } from "../components/EpisodeCover";
@@ -80,6 +80,8 @@ export function EpisodePage() {
           phase={episode.phase}
           startedAt={episode.createdAt}
           articleCount={episode.articles.length}
+          // A failed cancel just leaves the panel up; the query keeps polling.
+          onCancel={() => void cancelEpisode({ id: episode.id }).catch(() => {})}
         />
       )}
       {episode.status === "failed" && (

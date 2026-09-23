@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { Trash2 } from "lucide-react";
 import {
+  cancelEpisode,
   deleteArticle,
   generateEpisode,
   getEpisodeLimit,
@@ -83,6 +84,15 @@ export function InboxPage() {
     }
   }
 
+  async function onCancel(id: number) {
+    setError(null);
+    try {
+      await cancelEpisode({ id });
+    } catch (e) {
+      setError("Unable to cancel the episode. Reload the page and try again.");
+    }
+  }
+
   async function onDelete(id: number) {
     setError(null);
     try {
@@ -102,6 +112,7 @@ export function InboxPage() {
             phase={inFlight.phase}
             startedAt={inFlight.createdAt}
             articleCount={inFlight.articleCount}
+            onCancel={() => onCancel(inFlight.id)}
           />
           <p className="kicker mt-3 text-center">
             <Link

@@ -18,6 +18,7 @@ import { SetupPage } from "./src/pages/SetupPage" with { type: "ref" };
 import {
   deleteArticle,
   generateEpisode,
+  cancelEpisode,
   getEpisode,
   getEpisodeLimit,
   getEpisodes,
@@ -117,6 +118,7 @@ export default app({
     query(getEpisode, { entities: ['Episode'] }),
     action(deleteArticle, { entities: ['Article'] }),
     action(generateEpisode, { entities: ['Article', 'Episode'] }),
+    action(cancelEpisode, { entities: ['Article', 'Episode'] }),
     query(getSchedule, { entities: ['GenerationSchedule'] }),
     action(updateSchedule, { entities: ['GenerationSchedule'] }),
     query(getFeed, { entities: ['User'] }),
@@ -153,7 +155,14 @@ export default app({
     }),
 
     // Background generation
-    job(generateEpisodeJob, { executor: 'PgBoss', entities: ['Episode', 'Article'] }),
+    // A worker can die mid-run (a deploy, a stopped machine). pg-boss gives
+    // up on an attempt after expireInSeconds and re-runs the job, which the
+    // handler treats as a fresh start. STALE_MINUTES in episodes.ts matches.
+    job(generateEpisodeJob, {
+      executor: 'PgBoss',
+      entities: ['Episode', 'Article'],
+      performExecutorOptions: { pgBoss: { expireInSeconds: 1800, retryLimit: 2, retryDelay: 30 } },
+    }),
     // Automatic generation. Ticks on the hour and half hour, UTC, which is
     // the grid users pick their time from.
     job(autoGenerateJob, {

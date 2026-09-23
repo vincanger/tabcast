@@ -2,7 +2,12 @@ import OpenAI from "openai";
 import { env } from "wasp/server";
 import { WORDS_PER_MINUTE } from "../shared/constants";
 
-const client = new OpenAI({ apiKey: env.OPENAI_API_KEY });
+// Every request here is bounded in size: articles are cut at
+// MAX_CHARS_PER_ARTICLE for the script model, and narration goes out in
+// MAX_TTS_CHARS pieces. Each takes seconds, so two minutes is a hung
+// connection, not a slow one. The SDK retries its transient errors first.
+// Revisit the timeout if either of those constants grows.
+const client = new OpenAI({ apiKey: env.OPENAI_API_KEY, timeout: 120_000, maxRetries: 2 });
 
 // Roughly 2,000 words per article keeps 15 articles inside a small context window.
 const MAX_CHARS_PER_ARTICLE = 12_000;

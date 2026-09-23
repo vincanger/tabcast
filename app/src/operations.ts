@@ -1,5 +1,6 @@
 import { HttpError } from "wasp/server";
 import type {
+  CancelEpisode,
   DeleteArticle,
   GenerateEpisode,
   GetEpisode,
@@ -18,7 +19,7 @@ import { getSignedAudioUrl } from "./lib/s3";
 import { feedUrl } from "./feed";
 import { saveUrl } from "./apis";
 import { newSecretToken } from "./lib/token";
-import { episodeLimit, startEpisode } from "./episodes";
+import { episodeLimit, failEpisode, startEpisode } from "./episodes";
 import { EVERY_DAYS_OPTIONS, TICK_MINUTES, firstRun } from "./lib/schedule";
 
 import { MAX_MINUTES, MIN_MINUTES, type EpisodeRequest } from "./shared/constants";
@@ -123,6 +124,17 @@ export const generateEpisode: GenerateEpisode<EpisodeRequest, { episodeId: numbe
     throw new HttpError(400, "Unknown episode mode.");
   }
   return startEpisode(context.user.id, request, context.entities);
+};
+
+// Gives up on an episode that is taking too long. The job keeps running
+// until its current OpenAI call returns, then sees the row is no longer in
+// flight and discards its work; the articles are back in the inbox at once.
+export const cancelEpisode: CancelEpisode<{ id: number }, void> = async ({ id }, context) => {
+  if (!context.user) throw new HttpError(401);
+  const episode = await context.entities.Episode.findFirst({ where: { id, userId: context.user.id } });
+  if (!episode) throw new HttpError(404, "Episode not found.");
+  const changed = await failEpisode(id, "Cancelled.", context.entities);
+  if (!changed) throw new HttpError(400, "This episode is not being generated.");
 };
 
 export const getEpisodeLimit: GetEpisodeLimit<void, { limit: number | null; used: number }> = async (

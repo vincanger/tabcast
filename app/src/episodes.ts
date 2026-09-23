@@ -4,6 +4,11 @@ import { FULL_READ_MAX_MINUTES, estimateMinutes, summaryMinutes, type EpisodeReq
 
 type Entities = { Episode: PrismaClient["episode"]; Article: PrismaClient["article"] };
 
+// An episode still in flight after this long is treated as dead. The job's
+// own expiry (see main.wasp.ts) is the same number, so by now pg-boss has
+// given up on it too. A healthy run is minutes.
+export const STALE_MINUTES = 30;
+
 // Shared by the Generate button and the automatic schedule, so the two cannot
 // drift: same guards, same cap, same linking, same job.
 export async function startEpisode(
@@ -14,7 +19,15 @@ export async function startEpisode(
   const inFlight = await Episode.findFirst({
     where: { userId, status: { in: ["pending", "generating"] } },
   });
-  if (inFlight) throw new HttpError(409, "An episode is already being generated.");
+  if (inFlight) {
+    // A worker can die mid-run and leave the row in flight forever. Rather
+    // than block this account until someone notices, fail the corpse and
+    // carry on. Anything younger is assumed to still be working.
+    const age = Date.now() - inFlight.createdAt.getTime();
+    if (age < STALE_MINUTES * 60_000) throw new HttpError(409, "An episode is already being generated.");
+    console.warn(`[startEpisode] Episode ${inFlight.id} stuck for ${Math.round(age / 60_000)} min, failing it.`);
+    await failEpisode(inFlight.id, "Generation did not finish. Try again.", { Episode, Article });
+  }
 
   const limit = await episodeLimit(userId, Episode);
   if (limit.limit !== null && limit.used >= limit.limit) {
@@ -56,6 +69,24 @@ export async function startEpisode(
 
   await generateEpisodeJob.submit({ episodeId: episode.id });
   return { episodeId: episode.id };
+}
+
+// Marks an in-flight episode failed and returns its articles to the inbox.
+// Used by the cancel button, the stale sweep above, and the job's own error
+// path. Only touches a row that is still in flight, so a job finishing at
+// the same moment cannot be undone; returns whether anything changed.
+export async function failEpisode(
+  episodeId: number,
+  reason: string,
+  { Episode, Article }: Entities,
+): Promise<boolean> {
+  const { count } = await Episode.updateMany({
+    where: { id: episodeId, status: { in: ["pending", "generating"] } },
+    data: { status: "failed", phase: null, error: reason, completedAt: new Date() },
+  });
+  if (count === 0) return false;
+  await Article.updateMany({ where: { episodeId }, data: { episodeId: null, startSeconds: null } });
+  return true;
 }
 
 // How many episodes the account may still make. `limit` is null when the

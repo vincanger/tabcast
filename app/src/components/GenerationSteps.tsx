@@ -5,14 +5,20 @@ import { cn } from "../lib/utils";
 // The phases generateEpisodeJob writes to the episode as it works.
 const PHASES: string[] = ["reading", "writing", "recording"];
 
+// A normal run finishes inside this, so the way out only appears once
+// something is probably wrong.
+const CANCEL_AFTER_MS = 2 * 60_000;
+
 export function GenerationSteps({
   phase,
   startedAt,
   articleCount,
+  onCancel,
 }: {
   phase: string | null;
   startedAt: Date;
   articleCount: number;
+  onCancel?: () => void;
 }) {
   const [now, setNow] = useState(() => Date.now());
 
@@ -61,6 +67,20 @@ export function GenerationSteps({
           );
         })}
       </ol>
+
+      {onCancel && elapsed > CANCEL_AFTER_MS && (
+        <p className="mt-4 border-t pt-3 text-sm text-muted-foreground motion-safe:animate-in motion-safe:fade-in">
+          Taking too long?{" "}
+          <button
+            type="button"
+            onClick={onCancel}
+            className="underline decoration-border underline-offset-4 hover:text-foreground hover:cursor-pointer"
+          >
+            Cancel and get your articles back
+          </button>
+          .
+        </p>
+      )}
     </div>
   );
 }
