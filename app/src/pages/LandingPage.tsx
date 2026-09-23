@@ -11,8 +11,8 @@ import { cn } from "../lib/utils";
 // 22px spacing step, so the page reads as the same paper as the dashboard.
 const REPO_URL = "https://github.com/vincanger/tabcast";
 const EXTENSION_URL = `${REPO_URL}/releases/latest`;
-// TODO: point this at a real public episode once one is published.
-const SAMPLE_EPISODE_URL = `${REPO_URL}#readme`;
+// A public episode on the demo, shared from its owner's episode page.
+const SAMPLE_EPISODE_ID = 1;
 
 const STEPS = [
   "Save articles in Chrome, or from any app on your iPhone.",
@@ -79,14 +79,13 @@ export function LandingPage() {
             </p>
             <div className="mt-[11px] flex flex-wrap items-center gap-x-6 gap-y-3">
               <PrimaryButton to={demoTo}>Try the demo</PrimaryButton>
-              <a
-                href={SAMPLE_EPISODE_URL}
-                target="_blank"
-                rel="noreferrer noopener"
+              <Link
+                to="/listen/:id"
+                params={{ id: SAMPLE_EPISODE_ID }}
                 className="kicker py-2 text-foreground underline decoration-border underline-offset-4 hover:text-rubric"
               >
                 Hear a sample episode
-              </a>
+              </Link>
             </div>
             <p className="italic text-muted-foreground">
               Open source. Run it on your own server, or try the hosted demo.
