@@ -11,6 +11,7 @@ import {
 } from "./src/auth/email/pages" with { type: "ref" };
 import { onBeforeSignup } from "./src/auth/hooks" with { type: "ref" };
 import { verificationEmail, passwordResetEmail } from "./src/auth/email/emails" with { type: "ref" };
+import { LandingPage } from "./src/pages/LandingPage" with { type: "ref" };
 import { InboxPage } from "./src/pages/InboxPage" with { type: "ref" };
 import { EpisodesPage } from "./src/pages/EpisodesPage" with { type: "ref" };
 import { EpisodePage } from "./src/pages/EpisodePage" with { type: "ref" };
@@ -93,13 +94,16 @@ export default app({
     },
     onBeforeSignup,
     onAuthFailedRedirectTo: '/login',
-    onAuthSucceededRedirectTo: '/',
+    onAuthSucceededRedirectTo: '/inbox',
   },
   client: { rootComponent: Root },
   server: { envValidationSchema: serverEnvValidationSchema },
   spec: [
+    // Public landing page
+    route('LandingRoute', '/', page(LandingPage)),
+
     // Dashboard
-    route('InboxRoute', '/', page(InboxPage, { authRequired: true })),
+    route('InboxRoute', '/inbox', page(InboxPage, { authRequired: true })),
     route('EpisodesRoute', '/episodes', page(EpisodesPage, { authRequired: true })),
     route('EpisodeRoute', '/episodes/:id', page(EpisodePage, { authRequired: true })),
     route('SetupRoute', '/setup', page(SetupPage, { authRequired: true })),

@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
+import { Link, routes } from "wasp/client/router";
 import { login, requestPasswordReset, resetPassword, signup, verifyEmail } from "wasp/client/auth";
 import { Button } from "../../components/ui/button";
 import { CredentialsForm, ErrorLine, Field, Shell, friendlyError } from "../AuthForm";
@@ -16,7 +17,7 @@ export function LoginPage() {
       submitLabel="Log in"
       onSubmit={async (email, password) => {
         await login({ email, password });
-        navigate("/");
+        navigate(routes.InboxRoute.build());
       }}
     >
       No account yet?{" "}
@@ -176,7 +177,7 @@ export function PasswordResetPage() {
     setBusy(true);
     try {
       await resetPassword({ token, password });
-      navigate("/login");
+      navigate(routes.LoginRoute.build());
     } catch (err) {
       setError(friendlyError(err, "email"));
     } finally {

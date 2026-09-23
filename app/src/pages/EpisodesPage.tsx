@@ -1,4 +1,4 @@
-import { Link } from "react-router";
+import { Link } from "wasp/client/router";
 import { getEpisodes, getFeed, useQuery } from "wasp/client/operations";
 import { StatusBadge, formatDuration, pollWhileAnyInFlight } from "../components/episode";
 import { EpisodeCover } from "../components/EpisodeCover";
@@ -30,7 +30,7 @@ export function EpisodesPage() {
           <div className="mt-4 border px-6 py-12 text-center">
             <p className="font-serif text-xl">No episodes yet</p>
             <p className="mt-1 font-serif italic text-muted-foreground">
-              <Link to="/" className="text-rubric hover:underline">
+              <Link to="/inbox" className="text-rubric hover:underline">
                 Generate one from your inbox
               </Link>
               .
@@ -48,7 +48,7 @@ export function EpisodesPage() {
                     "motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:fill-mode-backwards",
                 )}
               >
-                <Link to={`/episodes/${e.id}`} className="group flex items-start gap-4 py-4">
+                <Link to="/episodes/:id" params={{ id: e.id }} className="group flex items-start gap-4 py-4">
                   <EpisodeCover sources={e.sourceUrls} className="mt-0.5 size-14" />
                   <div className="min-w-0 flex-1">
                     <span className="line-clamp-2 font-serif text-lg leading-snug group-hover:text-rubric">

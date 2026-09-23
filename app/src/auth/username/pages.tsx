@@ -1,4 +1,5 @@
-import { Link, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
+import { Link, routes } from "wasp/client/router";
 import { login, signup } from "wasp/client/auth";
 import { CredentialsForm } from "../AuthForm";
 
@@ -21,7 +22,7 @@ export function UsernameLoginPage() {
       submitLabel="Log in"
       onSubmit={async (username, password) => {
         await (login as unknown as Submit)({ username, password });
-        navigate("/");
+        navigate(routes.InboxRoute.build());
       }}
     >
       No account yet?{" "}
@@ -44,7 +45,7 @@ export function UsernameSignupPage() {
       onSubmit={async (username, password) => {
         await (signup as unknown as Submit)({ username, password });
         await (login as unknown as Submit)({ username, password });
-        navigate("/");
+        navigate(routes.InboxRoute.build());
       }}
     >
       Already have an account?{" "}

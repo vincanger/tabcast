@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link } from "wasp/client/router";
 import { Trash2 } from "lucide-react";
 import {
   cancelEpisode,
@@ -116,7 +116,8 @@ export function InboxPage() {
           />
           <p className="kicker mt-3 text-center">
             <Link
-              to={`/episodes/${inFlight.id}`}
+              to="/episodes/:id"
+              params={{ id: inFlight.id }}
               className="inline-block py-1 underline decoration-border underline-offset-4 hover:text-foreground"
             >
               Open the episode page →

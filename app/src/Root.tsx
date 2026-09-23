@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link, Outlet, useLocation } from "react-router";
+import { Outlet, useLocation } from "react-router";
+import { Link, NavLink, routes } from "wasp/client/router";
 import { logout, useAuth } from "wasp/client/auth";
 import { getEpisodeLimit, useQuery } from "wasp/client/operations";
 import { cn } from "./lib/utils";
@@ -32,6 +33,10 @@ export function Root() {
     );
   }, []);
 
+  // The landing page is its own composition with no header; it opens with the
+  // hero and carries the dashboard links in its footer.
+  if (pathname === routes.LandingRoute.build()) return <Outlet />;
+
   return (
     <div className="min-h-screen">
       <header className="border-b px-6 sm:px-10">
@@ -43,16 +48,14 @@ export function Root() {
             </span>
             {user && (
               <nav className="flex items-center gap-5">
-                <NavLink to="/" active={pathname === "/"}>
+                <NavLink to="/inbox" className={navClass}>
                   Inbox
                 </NavLink>
-                <NavLink
-                  to="/episodes"
-                  active={pathname.startsWith("/episodes")}
-                >
+                {/* Not `end`, so an episode page keeps Episodes underlined. */}
+                <NavLink to="/episodes" className={navClass}>
                   Episodes
                 </NavLink>
-                <NavLink to="/setup" active={pathname === "/setup"}>
+                <NavLink to="/setup" className={navClass}>
                   Setup
                 </NavLink>
                 <span className="hidden normal-case tracking-normal sm:inline">
@@ -69,7 +72,7 @@ export function Root() {
             )}
           </div>
           <Link
-            to="/"
+            to={user ? "/inbox" : "/"}
             className="block pt-3 pb-4 font-heading text-[22px] leading-none font-medium tracking-tight"
           >
             Tabcast
@@ -91,24 +94,9 @@ function accountLabel(identities: object): string {
   return ids.email?.id ?? ids.username?.id ?? "";
 }
 
-function NavLink({
-  to,
-  active,
-  children,
-}: {
-  to: string;
-  active: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <Link
-      to={to}
-      className={cn(
-        "kicker border-b-2 py-1 hover:text-foreground",
-        active ? "border-rubric text-foreground" : "border-transparent",
-      )}
-    >
-      {children}
-    </Link>
+function navClass({ isActive }: { isActive: boolean }): string {
+  return cn(
+    "kicker border-b-2 py-1 hover:text-foreground",
+    isActive ? "border-rubric text-foreground" : "border-transparent",
   );
 }

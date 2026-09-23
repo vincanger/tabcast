@@ -1,5 +1,6 @@
 import { useRef } from "react";
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
+import { Link } from "wasp/client/router";
 import { Play } from "lucide-react";
 import { cancelEpisode, getEpisode, useQuery } from "wasp/client/operations";
 import { StatusBadge, formatDuration, isInFlight, pollWhileInFlight } from "../components/episode";
@@ -88,7 +89,7 @@ export function EpisodePage() {
         <Alert variant="destructive">
           <AlertDescription>
             Generation failed: {episode.error ?? "unknown error"}. Your articles are back in the{" "}
-            <Link to="/">inbox</Link>, so you can generate the episode again.
+            <Link to="/inbox">inbox</Link>, so you can generate the episode again.
           </AlertDescription>
         </Alert>
       )}
