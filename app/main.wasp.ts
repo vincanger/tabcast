@@ -15,6 +15,7 @@ import { LandingPage } from "./src/pages/LandingPage" with { type: "ref" };
 import { InboxPage } from "./src/pages/InboxPage" with { type: "ref" };
 import { EpisodesPage } from "./src/pages/EpisodesPage" with { type: "ref" };
 import { EpisodePage } from "./src/pages/EpisodePage" with { type: "ref" };
+import { ListenPage } from "./src/pages/ListenPage" with { type: "ref" };
 import { SetupPage } from "./src/pages/SetupPage" with { type: "ref" };
 import {
   deleteArticle,
@@ -22,6 +23,8 @@ import {
   cancelEpisode,
   getEpisode,
   getEpisodeLimit,
+  getPublicEpisode,
+  setEpisodePublic,
   getEpisodes,
   getFeed,
   getInbox,
@@ -101,6 +104,8 @@ export default app({
   spec: [
     // Public landing page
     route('LandingRoute', '/', page(LandingPage)),
+    // A ready episode its owner has shared. No login needed.
+    route('ListenRoute', '/listen/:id', page(ListenPage)),
 
     // Dashboard
     route('InboxRoute', '/inbox', page(InboxPage, { authRequired: true })),
@@ -120,6 +125,8 @@ export default app({
     query(getEpisodes, { entities: ['Episode'] }),
     query(getEpisodeLimit, { entities: ['Episode'] }),
     query(getEpisode, { entities: ['Episode'] }),
+    query(getPublicEpisode, { entities: ['Episode'] }),
+    action(setEpisodePublic, { entities: ['Episode'] }),
     action(deleteArticle, { entities: ['Article'] }),
     action(generateEpisode, { entities: ['Article', 'Episode'] }),
     action(cancelEpisode, { entities: ['Article', 'Episode'] }),

@@ -1,21 +1,16 @@
-import { useRef } from "react";
+import { useState } from "react";
 import { useParams } from "react-router";
-import { Link } from "wasp/client/router";
-import { Play } from "lucide-react";
-import { cancelEpisode, getEpisode, useQuery } from "wasp/client/operations";
-import { StatusBadge, formatDuration, isInFlight, pollWhileInFlight } from "../components/episode";
-import { AudioPlayer, type AudioPlayerHandle } from "../components/AudioPlayer";
-import { EpisodeCover } from "../components/EpisodeCover";
+import { Link, routes } from "wasp/client/router";
+import { cancelEpisode, getEpisode, setEpisodePublic, useQuery } from "wasp/client/operations";
+import { isInFlight, pollWhileInFlight } from "../components/episode";
+import { EpisodeView } from "../components/EpisodeView";
 import { GenerationSteps } from "../components/GenerationSteps";
-import { SourceIcon } from "../components/SourceIcon";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { Skeleton } from "../components/ui/skeleton";
-import { chaptersFor } from "../shared/chapters";
 
 export function EpisodePage() {
   const { id } = useParams<{ id: string }>();
   const episodeId = Number(id);
-  const playerRef = useRef<AudioPlayerHandle>(null);
 
   const { data: episode, isLoading, error } = useQuery(
     getEpisode,
@@ -45,110 +40,85 @@ export function EpisodePage() {
   }
   if (!episode) return null;
 
-  const inFlight = isInFlight(episode.status);
-  const sources = episode.articles.map((a) => a.url);
-  const ready = episode.status === "ready" && !!episode.audioUrl;
-
   return (
-    <article className="space-y-8">
+    <div className="space-y-8">
       <p className="kicker">
         <Link to="/episodes" className="inline-block py-1 hover:text-foreground">
           ← All episodes
         </Link>
       </p>
+      <EpisodeView
+        episode={episode}
+        aside={episode.status === "ready" && <ShareControl id={episode.id} isPublic={episode.isPublic} />}
+        status={
+          <>
+            {isInFlight(episode.status) && (
+              <GenerationSteps
+                phase={episode.phase}
+                startedAt={episode.createdAt}
+                articleCount={episode.articles.length}
+                // A failed cancel just leaves the panel up; the query keeps polling.
+                onCancel={() => void cancelEpisode({ id: episode.id }).catch(() => {})}
+              />
+            )}
+            {episode.status === "failed" && (
+              <Alert variant="destructive">
+                <AlertDescription>
+                  Generation failed: {episode.error ?? "unknown error"}. Your articles are back in the{" "}
+                  <Link to="/inbox">inbox</Link>, so you can generate the episode again.
+                </AlertDescription>
+              </Alert>
+            )}
+          </>
+        }
+      />
+    </div>
+  );
+}
 
-      <header className="flex flex-wrap items-center gap-6 border-b pb-6">
-        <EpisodeCover sources={sources} className="size-28" />
-        <div className="min-w-0 flex-1">
-          <h1 className="font-serif text-4xl leading-tight font-medium text-balance">{episode.title}</h1>
-          <p className="kicker mt-3 flex flex-wrap items-center gap-2">
-            <span>
-              {new Date(episode.createdAt).toLocaleDateString(undefined, {
-                month: "long",
-                day: "numeric",
-                year: "numeric",
-              })}{" "}
-              · {episode.mode === "full" ? "read in full" : `target ${episode.targetMinutes} min`}
-              {episode.durationSeconds ? ` · about ${formatDuration(episode.durationSeconds)}` : ""}
-            </span>
-            <StatusBadge status={episode.status} />
-          </p>
-        </div>
-      </header>
+// Toggles the public link and shows it while it is on. The URL is built
+// from the route so it survives a move to another domain.
+function ShareControl({ id, isPublic }: { id: number; isPublic: boolean }) {
+  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const path = routes.ListenRoute.build({ params: { id } });
+  const url = `${window.location.origin}${path}`;
 
-      {inFlight && (
-        <GenerationSteps
-          phase={episode.phase}
-          startedAt={episode.createdAt}
-          articleCount={episode.articles.length}
-          // A failed cancel just leaves the panel up; the query keeps polling.
-          onCancel={() => void cancelEpisode({ id: episode.id }).catch(() => {})}
-        />
-      )}
-      {episode.status === "failed" && (
-        <Alert variant="destructive">
-          <AlertDescription>
-            Generation failed: {episode.error ?? "unknown error"}. Your articles are back in the{" "}
-            <Link to="/inbox">inbox</Link>, so you can generate the episode again.
-          </AlertDescription>
-        </Alert>
-      )}
-      {episode.status === "ready" && episode.audioUrl && (
-        <div className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2">
-          <AudioPlayer
-            ref={playerRef}
-            src={episode.audioUrl}
-            title={episode.title}
-            chapters={chaptersFor(episode.articles)}
-          />
-        </div>
-      )}
+  async function toggle() {
+    setBusy(true);
+    try {
+      await setEpisodePublic({ id, isPublic: !isPublic });
+    } finally {
+      setBusy(false);
+    }
+  }
 
-      <section>
-        <h2 className="kicker border-b pb-2">Sources</h2>
-        <ul className="divide-y">
-          {episode.articles.map((a) => (
-            <li key={a.id} className="flex items-start gap-4 py-3">
-              <SourceIcon url={a.url} className="mt-0.5" />
-              <div className="min-w-0">
-                <a
-                  href={a.url}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="line-clamp-2 font-serif text-lg leading-snug hover:text-rubric"
-                >
-                  {a.title}
-                </a>
-                <p className="font-serif italic text-muted-foreground">
-                  {a.siteName ?? new URL(a.url).hostname}
-                </p>
-              </div>
-              {ready && a.startSeconds !== null && (
-                <button
-                  type="button"
-                  onClick={() => playerRef.current?.seek(a.startSeconds!)}
-                  aria-label={`Play from ${formatDuration(a.startSeconds)}`}
-                  className="kicker ms-auto inline-flex shrink-0 items-center gap-1 py-1 tabular-nums hover:text-rubric"
-                >
-                  <Play className="size-3 fill-current" />
-                  {formatDuration(a.startSeconds)}
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
-      </section>
+  async function copy() {
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
 
-      {episode.script && (
-        <section>
-          <h2 className="kicker border-b pb-2">Transcript</h2>
-          <div className="mt-4 space-y-4 font-serif text-[17px] leading-relaxed">
-            {episode.script.split(/\n\s*\n/).map((p, i) => (
-              <p key={i}>{p}</p>
-            ))}
-          </div>
-        </section>
+  return (
+    <p className="kicker mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+      {isPublic ? (
+        <>
+          <span className="text-rubric">Public</span>
+          <a href={url} target="_blank" rel="noreferrer noopener" className="normal-case tracking-normal underline decoration-border underline-offset-4 hover:text-foreground">
+            {url}
+          </a>
+          <button type="button" onClick={copy} className="py-1 hover:text-foreground hover:cursor-pointer">
+            {copied ? "Copied" : "Copy"}
+          </button>
+          <button type="button" onClick={toggle} disabled={busy} className="py-1 hover:text-foreground hover:cursor-pointer">
+            Make private
+          </button>
+        </>
+      ) : (
+        <button type="button" onClick={toggle} disabled={busy} className="py-1 underline decoration-border underline-offset-4 hover:text-foreground hover:cursor-pointer">
+          Share with a public link →
+        </button>
       )}
-    </article>
+    </p>
   );
 }

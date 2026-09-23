@@ -5,6 +5,7 @@ import type {
   GenerateEpisode,
   GetEpisode,
   GetEpisodeLimit,
+  GetPublicEpisode,
   GetEpisodes,
   GetFeed,
   GetSaveShortcut,
@@ -12,6 +13,7 @@ import type {
   GetInbox,
   RotateFeedToken,
   RotateSaveToken,
+  SetEpisodePublic,
   UpdateSchedule,
 } from "wasp/server/operations";
 import type { Article, Episode, GenerationSchedule } from "wasp/entities";
@@ -82,22 +84,56 @@ export type EpisodeDetail = Omit<Episode, "audioKey" | "userId"> & {
   articles: Pick<Article, "id" | "url" | "title" | "siteName" | "startSeconds">[];
 };
 
+const episodeDetailInclude = {
+  articles: {
+    select: { id: true, url: true, title: true, siteName: true, startSeconds: true },
+    orderBy: { savedAt: "asc" as const },
+  },
+};
+
+async function toEpisodeDetail(
+  episode: Episode & { articles: EpisodeDetail["articles"] },
+): Promise<EpisodeDetail> {
+  const { audioKey, userId: _userId, ...rest } = episode;
+  const audioUrl = audioKey ? await getSignedAudioUrl(audioKey) : null;
+  return { ...rest, audioUrl };
+}
+
 export const getEpisode: GetEpisode<{ id: number }, EpisodeDetail> = async ({ id }, context) => {
   if (!context.user) throw new HttpError(401);
   const episode = await context.entities.Episode.findFirst({
     where: { id, userId: context.user.id },
-    include: {
-      articles: {
-        select: { id: true, url: true, title: true, siteName: true, startSeconds: true },
-        orderBy: { savedAt: "asc" },
-      },
-    },
+    include: episodeDetailInclude,
   });
   if (!episode) throw new HttpError(404, "Episode not found.");
+  return toEpisodeDetail(episode);
+};
 
-  const { audioKey, userId: _userId, ...rest } = episode;
-  const audioUrl = audioKey ? await getSignedAudioUrl(audioKey) : null;
-  return { ...rest, audioUrl };
+// The same shape as getEpisode, for anyone, but only for an episode its
+// owner has made public and only once it is ready: a public link never
+// shows someone else's failure or their inbox mid-generation.
+export const getPublicEpisode: GetPublicEpisode<{ id: number }, EpisodeDetail> = async (
+  { id },
+  context,
+) => {
+  const episode = await context.entities.Episode.findFirst({
+    where: { id, isPublic: true, status: "ready" },
+    include: episodeDetailInclude,
+  });
+  if (!episode) throw new HttpError(404, "Episode not found.");
+  return toEpisodeDetail(episode);
+};
+
+export const setEpisodePublic: SetEpisodePublic<{ id: number; isPublic: boolean }, void> = async (
+  { id, isPublic },
+  context,
+) => {
+  if (!context.user) throw new HttpError(401);
+  const { count } = await context.entities.Episode.updateMany({
+    where: { id, userId: context.user.id },
+    data: { isPublic },
+  });
+  if (count === 0) throw new HttpError(404, "Episode not found.");
 };
 
 export const deleteArticle: DeleteArticle<{ id: number }, void> = async ({ id }, context) => {

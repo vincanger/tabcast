@@ -85,6 +85,9 @@ model Episode {
   // Size of the MP3, needed for the RSS enclosure.
   audioBytes      Int?
   error           String?
+  // Anyone with the link can open a public episode at /listen/:id. Off by
+  // default; the owner flips it from the episode page.
+  isPublic        Boolean   @default(false)
   createdAt       DateTime  @default(now())
   completedAt     DateTime?
   articles        Article[]
