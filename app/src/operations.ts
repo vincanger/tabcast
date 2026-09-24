@@ -30,6 +30,24 @@ import { EVERY_DAYS_OPTIONS, TICK_MINUTES, firstRun } from "./lib/schedule";
 
 import { MAX_MINUTES, MIN_MINUTES, type EpisodeRequest } from "./shared/constants";
 
+// Operations arrive as JSON, so a missing or malformed argument reaches
+// Prisma as `undefined`, which it reads as "no filter": a lookup would return
+// someone's first row and an update would touch every row in scope. Check
+// the shape before it gets anywhere near a query.
+function idArg(value: unknown): number {
+  if (typeof value !== "number" || !Number.isInteger(value) || value <= 0) {
+    throw new HttpError(400, "Invalid id.");
+  }
+  return value;
+}
+
+function publicIdArg(value: unknown): string {
+  if (typeof value !== "string" || value === "" || value.length > 64) {
+    throw new HttpError(400, "Invalid episode id.");
+  }
+  return value;
+}
+
 export type InboxArticle = Pick<
   Article,
   "id" | "url" | "title" | "siteName" | "byline" | "wordCount" | "savedAt"
@@ -114,6 +132,7 @@ async function toEpisodeDetail(
 }
 
 export const getEpisode: GetEpisode<{ publicId: string }, EpisodeDetail> = async ({ publicId }, context) => {
+  publicId = publicIdArg(publicId);
   if (!context.user) throw new HttpError(401);
   const episode = await context.entities.Episode.findFirst({
     where: { publicId, userId: context.user.id },
@@ -130,6 +149,7 @@ export const getPublicEpisode: GetPublicEpisode<{ publicId: string }, EpisodeDet
   { publicId },
   context,
 ) => {
+  publicId = publicIdArg(publicId);
   const episode = await context.entities.Episode.findFirst({
     where: { publicId, isPublic: true, status: "ready" },
     include: episodeDetailInclude,
@@ -157,6 +177,8 @@ export const setEpisodePublic: SetEpisodePublic<{ id: number; isPublic: boolean 
   { id, isPublic },
   context,
 ) => {
+  id = idArg(id);
+  if (typeof isPublic !== "boolean") throw new HttpError(400, "Invalid value.");
   if (!context.user) throw new HttpError(401);
   const { count } = await context.entities.Episode.updateMany({
     where: { id, userId: context.user.id },
@@ -166,6 +188,7 @@ export const setEpisodePublic: SetEpisodePublic<{ id: number; isPublic: boolean 
 };
 
 export const deleteArticle: DeleteArticle<{ id: number }, void> = async ({ id }, context) => {
+  id = idArg(id);
   if (!context.user) throw new HttpError(401);
   const article = await context.entities.Article.findFirst({
     where: { id, userId: context.user.id },
@@ -182,6 +205,8 @@ export const deleteArticle: DeleteArticle<{ id: number }, void> = async ({ id },
 // stale inbox (an article saved from the extension meanwhile) reorders
 // nothing rather than something wrong.
 export const reorderInbox: ReorderInbox<{ ids: number[] }, void> = async ({ ids }, context) => {
+  if (!Array.isArray(ids)) throw new HttpError(400, "Invalid order.");
+  ids = ids.map(idArg);
   if (!context.user) throw new HttpError(401);
   const unused = await context.entities.Article.findMany({
     where: { userId: context.user.id, episodeId: null },
@@ -214,6 +239,7 @@ export const generateEpisode: GenerateEpisode<EpisodeRequest, { episodeId: numbe
 // until its current OpenAI call returns, then sees the row is no longer in
 // flight and discards its work; the articles are back in the inbox at once.
 export const cancelEpisode: CancelEpisode<{ id: number }, void> = async ({ id }, context) => {
+  id = idArg(id);
   if (!context.user) throw new HttpError(401);
   const episode = await context.entities.Episode.findFirst({ where: { id, userId: context.user.id } });
   if (!episode) throw new HttpError(404, "Episode not found.");
@@ -226,6 +252,7 @@ export const cancelEpisode: CancelEpisode<{ id: number }, void> = async ({ id },
 // they keep their reading order. An episode still generating is cancelled
 // first, from the same page, so this refuses it rather than racing the job.
 export const deleteEpisode: DeleteEpisode<{ id: number }, void> = async ({ id }, context) => {
+  id = idArg(id);
   if (!context.user) throw new HttpError(401);
   const episode = await context.entities.Episode.findFirst({ where: { id, userId: context.user.id } });
   if (!episode) throw new HttpError(404, "Episode not found.");
