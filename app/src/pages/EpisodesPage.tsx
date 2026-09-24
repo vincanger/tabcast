@@ -48,7 +48,7 @@ export function EpisodesPage() {
                     "motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:fill-mode-backwards",
                 )}
               >
-                <Link to="/episodes/:id" params={{ id: e.id }} className="group flex items-start gap-4 py-4">
+                <Link to="/episodes/:id" params={{ id: e.publicId }} className="group flex items-start gap-4 py-4">
                   <EpisodeCover sources={e.sourceUrls} className="mt-0.5 size-14" />
                   <div className="min-w-0 flex-1">
                     <span className="line-clamp-2 font-serif text-lg leading-snug group-hover:text-rubric">

@@ -9,16 +9,16 @@ import { Alert, AlertDescription } from "../components/ui/alert";
 import { Skeleton } from "../components/ui/skeleton";
 
 export function EpisodePage() {
-  const { id } = useParams<{ id: string }>();
-  const episodeId = Number(id);
+  // The URL carries the episode's public id, never its row id.
+  const { id: publicId = "" } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [deleting, setDeleting] = useState(false);
 
-  async function onDelete() {
+  async function onDelete(id: number) {
     if (!window.confirm("Delete this episode? Its articles go back to the inbox.")) return;
     setDeleting(true);
     try {
-      await deleteEpisode({ id: episodeId });
+      await deleteEpisode({ id });
       navigate(routes.EpisodesRoute.build());
     } catch {
       setDeleting(false);
@@ -28,9 +28,9 @@ export function EpisodePage() {
 
   const { data: episode, isLoading, error } = useQuery(
     getEpisode,
-    { id: episodeId },
+    { publicId },
     {
-      enabled: Number.isInteger(episodeId),
+      enabled: publicId !== "",
       refetchInterval: pollWhileInFlight,
       // Every fetch signs a fresh audio URL. Refetching when the window
       // regains focus would swap the <audio> src mid-play and stop it.
@@ -39,7 +39,7 @@ export function EpisodePage() {
     },
   );
 
-  if (!Number.isInteger(episodeId)) {
+  if (publicId === "") {
     return (
       <Alert variant="destructive">
         <AlertDescription>
@@ -70,7 +70,7 @@ export function EpisodePage() {
         {!isInFlight(episode.status) && (
           <button
             type="button"
-            onClick={onDelete}
+            onClick={() => onDelete(episode.id)}
             disabled={deleting}
             className="py-1 text-muted-foreground hover:text-destructive hover:cursor-pointer disabled:opacity-50"
           >
@@ -80,7 +80,11 @@ export function EpisodePage() {
       </p>
       <EpisodeView
         episode={episode}
-        aside={episode.status === "ready" && <ShareControl id={episode.id} isPublic={episode.isPublic} />}
+        aside={
+          episode.status === "ready" && (
+            <ShareControl id={episode.id} publicId={episode.publicId} isPublic={episode.isPublic} />
+          )
+        }
         status={
           <>
             {isInFlight(episode.status) && (
@@ -109,10 +113,10 @@ export function EpisodePage() {
 
 // Toggles the public link and shows it while it is on. The URL is built
 // from the route so it survives a move to another domain.
-function ShareControl({ id, isPublic }: { id: number; isPublic: boolean }) {
+function ShareControl({ id, publicId, isPublic }: { id: number; publicId: string; isPublic: boolean }) {
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
-  const path = routes.ListenRoute.build({ params: { id } });
+  const path = routes.ListenRoute.build({ params: { id: publicId } });
   const url = `${window.location.origin}${path}`;
 
   async function toggle() {

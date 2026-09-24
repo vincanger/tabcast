@@ -163,7 +163,7 @@ export function InboxPage() {
           <p className="kicker mt-3 text-center">
             <Link
               to="/episodes/:id"
-              params={{ id: inFlight.id }}
+              params={{ id: inFlight.publicId }}
               className="inline-block py-1 underline decoration-border underline-offset-4 hover:text-foreground"
             >
               Open the episode page →

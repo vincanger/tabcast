@@ -71,6 +71,10 @@ model Article {
 
 model Episode {
   id              Int       @id @default(autoincrement())
+  // What appears in URLs. Ten hex characters from the database, so the
+  // sequential id stays internal and one user cannot count another's
+  // episodes. Postgres fills it in for existing rows too.
+  publicId        String    @unique @default(dbgenerated("substr(md5((random())::text), 1, 10)"))
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId          Int
   // pending | generating | ready | failed

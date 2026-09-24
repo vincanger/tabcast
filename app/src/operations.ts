@@ -1,4 +1,4 @@
-import { HttpError } from "wasp/server";
+import { HttpError, env } from "wasp/server";
 import type {
   CancelEpisode,
   DeleteArticle,
@@ -6,6 +6,7 @@ import type {
   GenerateEpisode,
   GetEpisode,
   GetEpisodeLimit,
+  GetFeaturedEpisode,
   GetPublicEpisode,
   GetEpisodes,
   GetFeed,
@@ -53,7 +54,16 @@ export const getInbox: GetInbox<void, InboxArticle[]> = async (_args, context) =
 
 export type EpisodeSummary = Pick<
   Episode,
-  "id" | "status" | "phase" | "title" | "mode" | "targetMinutes" | "durationSeconds" | "createdAt" | "error"
+  | "id"
+  | "publicId"
+  | "status"
+  | "phase"
+  | "title"
+  | "mode"
+  | "targetMinutes"
+  | "durationSeconds"
+  | "createdAt"
+  | "error"
 > & { articleCount: number; sourceUrls: string[] };
 
 export const getEpisodes: GetEpisodes<void, EpisodeSummary[]> = async (_args, context) => {
@@ -69,6 +79,7 @@ export const getEpisodes: GetEpisodes<void, EpisodeSummary[]> = async (_args, co
   });
   return episodes.map(({ _count, articles, ...e }) => ({
     id: e.id,
+    publicId: e.publicId,
     status: e.status,
     phase: e.phase,
     title: e.title,
@@ -102,10 +113,10 @@ async function toEpisodeDetail(
   return { ...rest, audioUrl };
 }
 
-export const getEpisode: GetEpisode<{ id: number }, EpisodeDetail> = async ({ id }, context) => {
+export const getEpisode: GetEpisode<{ publicId: string }, EpisodeDetail> = async ({ publicId }, context) => {
   if (!context.user) throw new HttpError(401);
   const episode = await context.entities.Episode.findFirst({
-    where: { id, userId: context.user.id },
+    where: { publicId, userId: context.user.id },
     include: episodeDetailInclude,
   });
   if (!episode) throw new HttpError(404, "Episode not found.");
@@ -115,16 +126,31 @@ export const getEpisode: GetEpisode<{ id: number }, EpisodeDetail> = async ({ id
 // The same shape as getEpisode, for anyone, but only for an episode its
 // owner has made public and only once it is ready: a public link never
 // shows someone else's failure or their inbox mid-generation.
-export const getPublicEpisode: GetPublicEpisode<{ id: number }, EpisodeDetail> = async (
-  { id },
+export const getPublicEpisode: GetPublicEpisode<{ publicId: string }, EpisodeDetail> = async (
+  { publicId },
   context,
 ) => {
   const episode = await context.entities.Episode.findFirst({
-    where: { id, isPublic: true, status: "ready" },
+    where: { publicId, isPublic: true, status: "ready" },
     include: episodeDetailInclude,
   });
   if (!episode) throw new HttpError(404, "Episode not found.");
   return toEpisodeDetail(episode);
+};
+
+// The landing page's sample episode, named by row id in FEATURED_EPISODE_ID.
+// Null when unset, or when that episode is no longer public or ready, so
+// the link disappears rather than 404s.
+export const getFeaturedEpisode: GetFeaturedEpisode<void, { publicId: string } | null> = async (
+  _args,
+  context,
+) => {
+  if (env.FEATURED_EPISODE_ID === 0) return null;
+  const episode = await context.entities.Episode.findFirst({
+    where: { id: env.FEATURED_EPISODE_ID, isPublic: true, status: "ready" },
+    select: { publicId: true },
+  });
+  return episode ?? null;
 };
 
 export const setEpisodePublic: SetEpisodePublic<{ id: number; isPublic: boolean }, void> = async (

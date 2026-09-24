@@ -9,15 +9,14 @@ import { Skeleton } from "../components/ui/skeleton";
 // A shared episode, readable by anyone with the link. Same page as the
 // owner sees, minus the controls, plus a line saying what this is.
 export function ListenPage() {
-  const { id } = useParams<{ id: string }>();
-  const episodeId = Number(id);
+  const { id: publicId = "" } = useParams<{ id: string }>();
   const { data: user } = useAuth();
 
   const { data: episode, isLoading, error } = useQuery(
     getPublicEpisode,
-    { id: episodeId },
+    { publicId },
     // See EpisodePage: a refetch would replace the audio URL and stop playback.
-    { enabled: Number.isInteger(episodeId), refetchOnWindowFocus: false, refetchOnReconnect: false },
+    { enabled: publicId !== "", refetchOnWindowFocus: false, refetchOnReconnect: false },
   );
 
   if (isLoading) return <Skeleton className="h-56 w-full" />;

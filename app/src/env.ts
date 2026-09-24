@@ -15,6 +15,11 @@ export const serverEnvValidationSchema = defineEnvValidationSchema(
     // people at deploying their own.
     EPISODES_PER_USER: z.coerce.number().int().min(0).default(0),
 
+    // Row id of a public episode the landing page links to as "Hear a
+    // sample episode". 0 hides the link. The page asks the server for the
+    // episode's public id, so the link survives re-sharing and regeneration.
+    FEATURED_EPISODE_ID: z.coerce.number().int().min(0).default(0),
+
     OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required."),
     OPENAI_SCRIPT_MODEL: z.string().default("gpt-4o-mini"),
     OPENAI_TTS_MODEL: z.string().default("tts-1"),
