@@ -16,7 +16,8 @@ export function ListenPage() {
   const { data: episode, isLoading, error } = useQuery(
     getPublicEpisode,
     { id: episodeId },
-    { enabled: Number.isInteger(episodeId) },
+    // See EpisodePage: a refetch would replace the audio URL and stop playback.
+    { enabled: Number.isInteger(episodeId), refetchOnWindowFocus: false, refetchOnReconnect: false },
   );
 
   if (isLoading) return <Skeleton className="h-56 w-full" />;

@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { Link, routes } from "wasp/client/router";
-import { cancelEpisode, getEpisode, setEpisodePublic, useQuery } from "wasp/client/operations";
+import { cancelEpisode, deleteEpisode, getEpisode, setEpisodePublic, useQuery } from "wasp/client/operations";
 import { isInFlight, pollWhileInFlight } from "../components/episode";
 import { EpisodeView } from "../components/EpisodeView";
 import { GenerationSteps } from "../components/GenerationSteps";
@@ -11,11 +11,32 @@ import { Skeleton } from "../components/ui/skeleton";
 export function EpisodePage() {
   const { id } = useParams<{ id: string }>();
   const episodeId = Number(id);
+  const navigate = useNavigate();
+  const [deleting, setDeleting] = useState(false);
+
+  async function onDelete() {
+    if (!window.confirm("Delete this episode? Its articles go back to the inbox.")) return;
+    setDeleting(true);
+    try {
+      await deleteEpisode({ id: episodeId });
+      navigate(routes.EpisodesRoute.build());
+    } catch {
+      setDeleting(false);
+      window.alert("Unable to delete the episode. Reload the page and try again.");
+    }
+  }
 
   const { data: episode, isLoading, error } = useQuery(
     getEpisode,
     { id: episodeId },
-    { enabled: Number.isInteger(episodeId), refetchInterval: pollWhileInFlight },
+    {
+      enabled: Number.isInteger(episodeId),
+      refetchInterval: pollWhileInFlight,
+      // Every fetch signs a fresh audio URL. Refetching when the window
+      // regains focus would swap the <audio> src mid-play and stop it.
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    },
   );
 
   if (!Number.isInteger(episodeId)) {
@@ -42,10 +63,20 @@ export function EpisodePage() {
 
   return (
     <div className="space-y-8">
-      <p className="kicker">
+      <p className="kicker flex items-center justify-between gap-4">
         <Link to="/episodes" className="inline-block py-1 hover:text-foreground">
           ← All episodes
         </Link>
+        {!isInFlight(episode.status) && (
+          <button
+            type="button"
+            onClick={onDelete}
+            disabled={deleting}
+            className="py-1 text-muted-foreground hover:text-destructive hover:cursor-pointer disabled:opacity-50"
+          >
+            {deleting ? "Deleting…" : "Delete episode"}
+          </button>
+        )}
       </p>
       <EpisodeView
         episode={episode}

@@ -1,4 +1,4 @@
-import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "wasp/server";
 
@@ -26,6 +26,10 @@ export async function uploadEpisodeAudio(key: string, body: Buffer): Promise<voi
       ContentType: "audio/mpeg",
     }),
   );
+}
+
+export async function deleteEpisodeAudio(key: string): Promise<void> {
+  await s3.send(new DeleteObjectCommand({ Bucket: env.S3_BUCKET, Key: key }));
 }
 
 const SIGNED_URL_TTL_SECONDS = 60 * 60;

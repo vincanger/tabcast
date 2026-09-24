@@ -56,6 +56,9 @@ model Article {
   textContent String
   wordCount   Int
   savedAt     DateTime @default(now())
+  // Reading order within the inbox and then the episode. Null until the
+  // user reorders; unranked articles follow the ranked ones by savedAt.
+  position    Int?
   // Set once the article has been included in an episode.
   episode     Episode? @relation(fields: [episodeId], references: [id], onDelete: SetNull)
   episodeId   Int?

@@ -83,12 +83,19 @@ export function CredentialsForm({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  async function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    // Read the fields themselves rather than React state. A password manager
+    // or browser autofill can set a value without a change event, and then
+    // submit with Enter; state would still be empty and the login would fail
+    // for no visible reason.
+    const data = new FormData(e.currentTarget);
+    const submittedId = String(data.get(identity) ?? id);
+    const submittedPassword = String(data.get("password") ?? password);
     setError(null);
     setBusy(true);
     try {
-      await onSubmit(id, password);
+      await onSubmit(submittedId, submittedPassword);
     } catch (err) {
       setError(friendlyError(err, identity));
     } finally {

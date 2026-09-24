@@ -1,4 +1,4 @@
-import { useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
+import { useEffect, useImperativeHandle, useMemo, useRef, useState, type Ref } from "react";
 import { Download, Loader2, Pause, Play } from "lucide-react";
 import { Button } from "./ui/button";
 import { IconSwap } from "./IconSwap";
@@ -10,47 +10,24 @@ const BARS = 72;
 // Cycled by the speed button, starting from 1x.
 const SPEEDS = [1, 1.25, 1.5, 2, 0.75];
 
-// Decode the episode audio once to draw a real waveform. If the fetch or decode
-// fails (CORS on the audio host, an unsupported file) the player still works and
-// falls back to flat bars.
-function useWaveform(url: string): number[] | null {
-  const [peaks, setPeaks] = useState<number[] | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    setPeaks(null);
-
-    (async () => {
-      try {
-        const bytes = await (await fetch(url)).arrayBuffer();
-        const ctx = new AudioContext();
-        const decoded = await ctx.decodeAudioData(bytes);
-        await ctx.close();
-
-        const samples = decoded.getChannelData(0);
-        const bucket = Math.floor(samples.length / BARS);
-        const out: number[] = [];
-        for (let i = 0; i < BARS; i++) {
-          let peak = 0;
-          for (let j = 0; j < bucket; j++) {
-            const v = Math.abs(samples[i * bucket + j]);
-            if (v > peak) peak = v;
-          }
-          out.push(peak);
-        }
-        const max = Math.max(...out, 0.0001);
-        if (!cancelled) setPeaks(out.map((v) => v / max));
-      } catch {
-        if (!cancelled) setPeaks(null);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [url]);
-
-  return peaks;
+// The bars are decorative. A real waveform meant downloading and decoding the
+// whole file (tens of megabytes for a long episode) before the first bar drew,
+// and that download fought the player for bandwidth, so pressing play sat
+// silent for ten seconds or more. These are seeded from the title, so an
+// episode always looks the same and costs nothing.
+function useWaveform(seed: string): number[] {
+  return useMemo(() => {
+    let h = 2166136261;
+    for (const ch of seed) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+    const out: number[] = [];
+    for (let i = 0; i < BARS; i++) {
+      h ^= h << 13; h ^= h >>> 17; h ^= h << 5;
+      // Mostly mid-height with the occasional spike, like speech.
+      const r = ((h >>> 0) % 1000) / 1000;
+      out.push(0.35 + 0.65 * r * r);
+    }
+    return out;
+  }, [seed]);
 }
 
 function formatTime(seconds: number): string {
@@ -75,7 +52,7 @@ export function AudioPlayer({
   ref?: Ref<AudioPlayerHandle>;
 }) {
   const audioRef = useRef<HTMLAudioElement>(null);
-  const peaks = useWaveform(src);
+  const peaks = useWaveform(title);
   const trackRef = useRef<HTMLDivElement>(null);
   // How many bars fit: each needs at least 2px plus the 2px gap, so a 320px
   // phone gets a few dozen and a desktop gets all 72.
@@ -91,6 +68,10 @@ export function AudioPlayer({
   }, []);
 
   const [playing, setPlaying] = useState(false);
+  // True between asking for audio and hearing it: the first play, and any
+  // later stall. The play button shows a spinner so a slow start reads as
+  // loading rather than a dead click.
+  const [buffering, setBuffering] = useState(false);
   const [current, setCurrent] = useState(0);
   const [duration, setDuration] = useState(0);
   const [speedIndex, setSpeedIndex] = useState(0);
@@ -155,8 +136,16 @@ export function AudioPlayer({
         ref={audioRef}
         src={src}
         preload="metadata"
-        onPlay={() => setPlaying(true)}
-        onPause={() => setPlaying(false)}
+        onPlay={() => {
+          setPlaying(true);
+          setBuffering(true);
+        }}
+        onPlaying={() => setBuffering(false)}
+        onWaiting={() => setBuffering(true)}
+        onPause={() => {
+          setPlaying(false);
+          setBuffering(false);
+        }}
         onTimeUpdate={(e) => setCurrent(e.currentTarget.currentTime)}
         onLoadedMetadata={(e) => {
           setDuration(e.currentTarget.duration);
@@ -171,12 +160,16 @@ export function AudioPlayer({
         aria-label={playing ? "Pause" : "Play"}
         className="flex size-12 shrink-0 items-center justify-center bg-primary text-primary-foreground transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       >
-        <IconSwap
-          active={playing}
-          className="size-5"
-          activeIcon={<Pause className="size-5 fill-current" />}
-          inactiveIcon={<Play className="size-5 translate-x-px fill-current" />}
-        />
+        {buffering ? (
+          <Loader2 className="size-5 animate-spin" />
+        ) : (
+          <IconSwap
+            active={playing}
+            className="size-5"
+            activeIcon={<Pause className="size-5 fill-current" />}
+            inactiveIcon={<Play className="size-5 translate-x-px fill-current" />}
+          />
+        )}
       </button>
 
       <div className="min-w-0 flex-1">
@@ -204,18 +197,13 @@ export function AudioPlayer({
         >
           {Array.from({ length: bars }, (_, i) => {
             // Sample the fixed peak buckets down to however many bars fit.
-            const peak = peaks ? peaks[Math.floor((i * BARS) / bars)] : null;
-            const height = peak !== null ? 0.15 + peak * 0.85 : 0.25;
+            const height = peaks[Math.floor((i * BARS) / bars)];
             const played = i / bars < progress;
             return (
               <span
                 key={i}
                 style={{ height: `${height * 100}%` }}
-                className={cn(
-                  "flex-1 transition-colors",
-                  played ? "bg-rubric" : "bg-foreground/25",
-                  !peaks && "motion-safe:animate-pulse",
-                )}
+                className={cn("flex-1 transition-colors", played ? "bg-rubric" : "bg-foreground/25")}
               />
             );
           })}

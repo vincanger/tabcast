@@ -1,3 +1,4 @@
+import { ARTICLE_ORDER } from "./lib/articleOrder";
 import { HttpError, config } from "wasp/server";
 import type { FeedApi, FeedAudioApi, FeedChaptersApi } from "wasp/server/api";
 import type { Article, Episode } from "wasp/entities";
@@ -44,7 +45,7 @@ export const feedApi: FeedApi<{ token: string }, string> = async (req, res, cont
   const episodes = await context.entities.Episode.findMany({
     where: { userId: user.id, status: "ready", audioKey: { not: null } },
     orderBy: { createdAt: "desc" },
-    include: { articles: { select: ARTICLE_SELECT, orderBy: { savedAt: "asc" } } },
+    include: { articles: { select: ARTICLE_SELECT, orderBy: ARTICLE_ORDER } },
   });
 
   res.set("Content-Type", "application/rss+xml; charset=utf-8");
@@ -99,7 +100,7 @@ export const feedChaptersApi: FeedChaptersApi<{ token: string; id: string }, Cha
 
   const episode = await context.entities.Episode.findFirst({
     where: { id: episodeId, userId: user.id, status: "ready" },
-    select: { articles: { select: ARTICLE_SELECT, orderBy: { savedAt: "asc" } } },
+    select: { articles: { select: ARTICLE_SELECT, orderBy: ARTICLE_ORDER } },
   });
   if (!episode) throw new HttpError(404);
 

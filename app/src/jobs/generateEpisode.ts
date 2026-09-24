@@ -4,6 +4,7 @@ import { mp3DurationSeconds } from "../lib/mp3";
 import { withChapterTags } from "../lib/id3";
 import { episodeAudioKey, uploadEpisodeAudio } from "../lib/s3";
 import { failEpisode } from "../episodes";
+import { ARTICLE_ORDER } from "../lib/articleOrder";
 
 type Input = { episodeId: number };
 
@@ -12,7 +13,7 @@ export const generateEpisodeJob: GenerateEpisodeJob<Input, void> = async ({ epis
 
   const episode = await Episode.findUnique({
     where: { id: episodeId },
-    include: { articles: { orderBy: { savedAt: "asc" } } },
+    include: { articles: { orderBy: ARTICLE_ORDER } },
   });
   if (!episode) {
     console.warn(`[generateEpisode] Episode ${episodeId} no longer exists.`);

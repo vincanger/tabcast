@@ -19,6 +19,8 @@ import { ListenPage } from "./src/pages/ListenPage" with { type: "ref" };
 import { SetupPage } from "./src/pages/SetupPage" with { type: "ref" };
 import {
   deleteArticle,
+  deleteEpisode,
+  reorderInbox,
   generateEpisode,
   cancelEpisode,
   getEpisode,
@@ -128,8 +130,10 @@ export default app({
     query(getPublicEpisode, { entities: ['Episode'] }),
     action(setEpisodePublic, { entities: ['Episode'] }),
     action(deleteArticle, { entities: ['Article'] }),
+    action(reorderInbox, { entities: ['Article'] }),
     action(generateEpisode, { entities: ['Article', 'Episode'] }),
     action(cancelEpisode, { entities: ['Article', 'Episode'] }),
+    action(deleteEpisode, { entities: ['Article', 'Episode'] }),
     query(getSchedule, { entities: ['GenerationSchedule'] }),
     action(updateSchedule, { entities: ['GenerationSchedule'] }),
     query(getFeed, { entities: ['User'] }),

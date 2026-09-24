@@ -2,6 +2,7 @@ import { HttpError } from "wasp/server";
 import type {
   CancelEpisode,
   DeleteArticle,
+  DeleteEpisode,
   GenerateEpisode,
   GetEpisode,
   GetEpisodeLimit,
@@ -12,16 +13,18 @@ import type {
   GetSchedule,
   GetInbox,
   RotateFeedToken,
+  ReorderInbox,
   RotateSaveToken,
   SetEpisodePublic,
   UpdateSchedule,
 } from "wasp/server/operations";
 import type { Article, Episode, GenerationSchedule } from "wasp/entities";
-import { getSignedAudioUrl } from "./lib/s3";
+import { deleteEpisodeAudio, getSignedAudioUrl } from "./lib/s3";
 import { feedUrl } from "./feed";
 import { saveUrl } from "./apis";
 import { newSecretToken } from "./lib/token";
 import { episodeLimit, failEpisode, startEpisode } from "./episodes";
+import { ARTICLE_ORDER } from "./lib/articleOrder";
 import { EVERY_DAYS_OPTIONS, TICK_MINUTES, firstRun } from "./lib/schedule";
 
 import { MAX_MINUTES, MIN_MINUTES, type EpisodeRequest } from "./shared/constants";
@@ -35,7 +38,7 @@ export const getInbox: GetInbox<void, InboxArticle[]> = async (_args, context) =
   if (!context.user) throw new HttpError(401);
   return context.entities.Article.findMany({
     where: { userId: context.user.id, episodeId: null },
-    orderBy: { savedAt: "desc" },
+    orderBy: ARTICLE_ORDER,
     select: {
       id: true,
       url: true,
@@ -61,7 +64,7 @@ export const getEpisodes: GetEpisodes<void, EpisodeSummary[]> = async (_args, co
     include: {
       _count: { select: { articles: true } },
       // Just enough for the cover mosaic.
-      articles: { select: { url: true }, orderBy: { savedAt: "asc" }, take: 4 },
+      articles: { select: { url: true }, orderBy: ARTICLE_ORDER, take: 4 },
     },
   });
   return episodes.map(({ _count, articles, ...e }) => ({
@@ -87,7 +90,7 @@ export type EpisodeDetail = Omit<Episode, "audioKey" | "userId"> & {
 const episodeDetailInclude = {
   articles: {
     select: { id: true, url: true, title: true, siteName: true, startSeconds: true },
-    orderBy: { savedAt: "asc" as const },
+    orderBy: ARTICLE_ORDER,
   },
 };
 
@@ -148,6 +151,25 @@ export const deleteArticle: DeleteArticle<{ id: number }, void> = async ({ id },
   await context.entities.Article.delete({ where: { id } });
 };
 
+// Sets the reading order of the whole inbox at once. The client sends every
+// unused article id in the order it wants; anything else is rejected, so a
+// stale inbox (an article saved from the extension meanwhile) reorders
+// nothing rather than something wrong.
+export const reorderInbox: ReorderInbox<{ ids: number[] }, void> = async ({ ids }, context) => {
+  if (!context.user) throw new HttpError(401);
+  const unused = await context.entities.Article.findMany({
+    where: { userId: context.user.id, episodeId: null },
+    select: { id: true },
+  });
+  const expected = new Set(unused.map((a) => a.id));
+  if (ids.length !== expected.size || !ids.every((id) => expected.has(id))) {
+    throw new HttpError(409, "The inbox changed. Reload and try again.");
+  }
+  await Promise.all(
+    ids.map((id, position) => context.entities.Article.update({ where: { id }, data: { position } })),
+  );
+};
+
 export const generateEpisode: GenerateEpisode<EpisodeRequest, { episodeId: number }> = async (
   request,
   context,
@@ -171,6 +193,33 @@ export const cancelEpisode: CancelEpisode<{ id: number }, void> = async ({ id },
   if (!episode) throw new HttpError(404, "Episode not found.");
   const changed = await failEpisode(id, "Cancelled.", context.entities);
   if (!changed) throw new HttpError(400, "This episode is not being generated.");
+};
+
+// Removes a finished or failed episode and its audio. Its articles go back
+// to the inbox on their own: the schema nulls their episode on delete, and
+// they keep their reading order. An episode still generating is cancelled
+// first, from the same page, so this refuses it rather than racing the job.
+export const deleteEpisode: DeleteEpisode<{ id: number }, void> = async ({ id }, context) => {
+  if (!context.user) throw new HttpError(401);
+  const episode = await context.entities.Episode.findFirst({ where: { id, userId: context.user.id } });
+  if (!episode) throw new HttpError(404, "Episode not found.");
+  if (episode.status === "pending" || episode.status === "generating") {
+    throw new HttpError(400, "Cancel the episode before deleting it.");
+  }
+  // Articles first, so they are back in the inbox even if the audio delete
+  // fails; the row is removed last.
+  await context.entities.Article.updateMany({
+    where: { episodeId: id },
+    data: { episodeId: null, startSeconds: null },
+  });
+  if (episode.audioKey) {
+    try {
+      await deleteEpisodeAudio(episode.audioKey);
+    } catch (err) {
+      console.warn(`[deleteEpisode] Could not delete audio ${episode.audioKey}: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+  await context.entities.Episode.delete({ where: { id } });
 };
 
 export const getEpisodeLimit: GetEpisodeLimit<void, { limit: number | null; used: number }> = async (

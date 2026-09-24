@@ -1,6 +1,23 @@
 import { useState } from "react";
 import { Link } from "wasp/client/router";
-import { Trash2 } from "lucide-react";
+import { GripVertical, Trash2 } from "lucide-react";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   cancelEpisode,
   deleteArticle,
@@ -8,6 +25,7 @@ import {
   getEpisodeLimit,
   getEpisodes,
   getInbox,
+  reorderInbox,
   useQuery,
 } from "wasp/client/operations";
 import {
@@ -29,6 +47,7 @@ import { Button } from "../components/ui/button";
 import { Skeleton } from "../components/ui/skeleton";
 import { useEnterOnce } from "../lib/enterOnce";
 import { cn } from "../lib/utils";
+import type { InboxArticle } from "../operations";
 
 export function InboxPage() {
   const inbox = useQuery(getInbox);
@@ -49,7 +68,11 @@ export function InboxPage() {
 
   const inFlight = episodes.data?.find((e) => isInFlight(e.status));
   const latestFailed = episodes.data?.[0]?.status === "failed" ? episodes.data[0] : null;
-  const articles = inbox.data ?? [];
+  const [pendingOrder, setPendingOrder] = useState<number[] | null>(null);
+  const loaded = inbox.data ?? [];
+  const articles = pendingOrder
+    ? [...loaded].sort((a, b) => pendingOrder.indexOf(a.id) - pendingOrder.indexOf(b.id))
+    : loaded;
 
   // A full read narrates every article verbatim, so its length is the inbox's,
   // not the user's. The sentence states the estimate instead of a target.
@@ -90,6 +113,29 @@ export function InboxPage() {
       await cancelEpisode({ id });
     } catch (e) {
       setError("Unable to cancel the episode. Reload the page and try again.");
+    }
+  }
+
+  // Drag and drop reorders the list. The new order shows at once from local
+  // state and is sent whole; once the server has it the inbox query refreshes
+  // and the local copy is dropped.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  async function onDragEnd({ active, over }: DragEndEvent) {
+    if (!over || active.id === over.id) return;
+    const ids = articles.map((a) => a.id);
+    const next = arrayMove(ids, ids.indexOf(Number(active.id)), ids.indexOf(Number(over.id)));
+    setPendingOrder(next);
+    setError(null);
+    try {
+      await reorderInbox({ ids: next });
+    } catch (e) {
+      setError("Unable to reorder. Reload the page and try again.");
+    } finally {
+      setPendingOrder(null);
     }
   }
 
@@ -212,7 +258,10 @@ export function InboxPage() {
       )}
 
       <section>
-        <h1 className="kicker border-b pb-2">Inbox</h1>
+        <h1 className="kicker flex items-baseline justify-between border-b pb-2">
+          Inbox
+          {articles.length > 1 && <span className="text-muted-foreground">Drag to set the reading order</span>}
+        </h1>
         {inbox.isLoading && <Skeleton className="mt-4 h-40 w-full" />}
         {inbox.error && (
           <Alert variant="destructive" className="mt-4">
@@ -228,46 +277,23 @@ export function InboxPage() {
           </div>
         )}
         {articles.length > 0 && (
-          <ul className="divide-y border-b">
-            {articles.map((a, i) => (
-              <li
-                key={a.id}
-                style={enter ? { animationDelay: `${i * 45}ms` } : undefined}
-                className={cn(
-                  // A compact table row: favicon, title, words, date, delete.
-                  // Below sm the words and date stack under the title.
-                  "grid grid-cols-[24px_minmax(0,1fr)_36px] items-center gap-3 py-2",
-                  enter &&
-                    "motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:fill-mode-backwards",
-                )}
-              >
-                <SourceIcon url={a.url} className="size-6 rounded-sm" />
-                <div className="grid min-w-0 gap-x-4 gap-y-0.5 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
-                  <a
-                    href={a.url}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    title={a.title}
-                    className="line-clamp-2 font-serif text-[19px] leading-snug hover:text-rubric sm:line-clamp-1"
-                  >
-                    {a.title}
-                  </a>
-                  <span className="kicker whitespace-nowrap">{a.wordCount.toLocaleString()} words</span>
-                  <span className="kicker whitespace-nowrap">{formatDate(a.savedAt)}</span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Delete ${a.title}`}
-                  className="text-muted-foreground hover:text-destructive"
-                  onClick={() => onDelete(a.id)}
-                  disabled={!!inFlight}
-                >
-                  <Trash2 className="size-4" />
-                </Button>
-              </li>
-            ))}
-          </ul>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+            <SortableContext items={articles.map((a) => a.id)} strategy={verticalListSortingStrategy}>
+              <ul className="divide-y border-b">
+                {articles.map((a, i) => (
+                  <InboxRow
+                    key={a.id}
+                    article={a}
+                    index={i}
+                    enter={enter}
+                    sortable={articles.length > 1 && !inFlight}
+                    onDelete={() => onDelete(a.id)}
+                    deleteDisabled={!!inFlight}
+                  />
+                ))}
+              </ul>
+            </SortableContext>
+          </DndContext>
         )}
       </section>
     </div>
@@ -321,6 +347,88 @@ function DeployPitch({ limit }: { limit: number }) {
         Your episodes stay playable here and in your podcast app.
       </p>
     </section>
+  );
+}
+
+// One inbox row. The grip at the front is the only drag handle, so the title
+// stays a plain link and the delete button a plain button. While a row is
+// being dragged it goes translucent and the others slide out of its way.
+function InboxRow({
+  article: a,
+  index,
+  enter,
+  sortable,
+  onDelete,
+  deleteDisabled,
+}: {
+  article: InboxArticle;
+  index: number;
+  enter: boolean;
+  sortable: boolean;
+  onDelete: () => void;
+  deleteDisabled: boolean;
+}) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
+    id: a.id,
+    disabled: !sortable,
+  });
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        ...(enter && !transform ? { animationDelay: `${index * 45}ms` } : {}),
+      }}
+      className={cn(
+        // A compact table row: grip, favicon, title, words, date, delete.
+        // Below sm the words and date stack under the title.
+        "grid grid-cols-[16px_24px_minmax(0,1fr)_36px] items-center gap-3 bg-background py-2",
+        isDragging && "relative z-10 opacity-60",
+        enter &&
+          !isDragging &&
+          "motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:fill-mode-backwards",
+      )}
+    >
+      <button
+        ref={setActivatorNodeRef}
+        type="button"
+        aria-label={`Drag to reorder ${a.title}`}
+        className={cn(
+          "flex h-8 w-4 items-center justify-center text-muted-foreground/60 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+          sortable ? "cursor-grab active:cursor-grabbing" : "invisible",
+        )}
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="size-4" />
+      </button>
+      <SourceIcon url={a.url} className="size-6 rounded-sm" />
+      <div className="grid min-w-0 gap-x-4 gap-y-0.5 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
+        <a
+          href={a.url}
+          target="_blank"
+          rel="noreferrer noopener"
+          title={a.title}
+          className="line-clamp-2 font-serif text-[19px] leading-snug hover:text-rubric sm:line-clamp-1"
+        >
+          {a.title}
+        </a>
+        <span className="kicker whitespace-nowrap">{a.wordCount.toLocaleString()} words</span>
+        <span className="kicker whitespace-nowrap">{formatDate(a.savedAt)}</span>
+      </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label={`Delete ${a.title}`}
+        className="text-muted-foreground hover:text-destructive"
+        onClick={onDelete}
+        disabled={deleteDisabled}
+      >
+        <Trash2 className="size-4" />
+      </Button>
+    </li>
   );
 }
 
